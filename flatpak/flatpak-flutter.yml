@@ -9,7 +9,7 @@
 ##
 app-id: app.abelnotes.notes
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.llvm20
@@ -99,7 +99,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/abelnotes/abelnotes.git
-        tag: v0.37.2
+        tag: v0.37.7
       - type: git
         url: https://github.com/flutter/flutter.git
         tag: '3.44.0'

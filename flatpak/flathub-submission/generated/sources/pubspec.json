@@ -338,6 +338,20 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/console-4.1.0.tar.gz",
+        "sha256": "e04e7824384c5b39389acdd6dc7d33f3efe6b232f6f16d7626f194f6a01ad69a",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/console-4.1.0"
+    },
+    {
+        "type": "inline",
+        "contents": "e04e7824384c5b39389acdd6dc7d33f3efe6b232f6f16d7626f194f6a01ad69a",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "console-4.1.0.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://pub.dev/api/archives/convert-3.1.2.tar.gz",
         "sha256": "b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68",
         "strip-components": 0,
@@ -814,6 +828,20 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/get_it-9.2.1.tar.gz",
+        "sha256": "568d62f0e68666fb5d95519743b3c24a34c7f19d834b0658c46e26d778461f66",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/get_it-9.2.1"
+    },
+    {
+        "type": "inline",
+        "contents": "568d62f0e68666fb5d95519743b3c24a34c7f19d834b0658c46e26d778461f66",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "get_it-9.2.1.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://pub.dev/api/archives/glob-2.1.3.tar.gz",
         "sha256": "c3f1ee72c96f8f78935e18aa8cecced9ab132419e8625dc187e1c2408efc20de",
         "strip-components": 0,
@@ -824,6 +852,90 @@
         "contents": "c3f1ee72c96f8f78935e18aa8cecced9ab132419e8625dc187e1c2408efc20de",
         "dest": ".pub-cache/hosted-hashes/pub.dev",
         "dest-filename": "glob-2.1.3.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/google_identity_services_web-0.3.3+1.tar.gz",
+        "sha256": "5d187c46dc59e02646e10fe82665fc3884a9b71bc1c90c2b8b749316d33ee454",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/google_identity_services_web-0.3.3+1"
+    },
+    {
+        "type": "inline",
+        "contents": "5d187c46dc59e02646e10fe82665fc3884a9b71bc1c90c2b8b749316d33ee454",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "google_identity_services_web-0.3.3+1.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/google_sign_in-7.2.0.tar.gz",
+        "sha256": "521031b65853b4409b8213c0387d57edaad7e2a949ce6dea0d8b2afc9cb29763",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/google_sign_in-7.2.0"
+    },
+    {
+        "type": "inline",
+        "contents": "521031b65853b4409b8213c0387d57edaad7e2a949ce6dea0d8b2afc9cb29763",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "google_sign_in-7.2.0.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/google_sign_in_android-7.2.16.tar.gz",
+        "sha256": "57782125965ca87b03d42a147d40b046f1fd6a09141a58913e1b86671a5ef22e",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/google_sign_in_android-7.2.16"
+    },
+    {
+        "type": "inline",
+        "contents": "57782125965ca87b03d42a147d40b046f1fd6a09141a58913e1b86671a5ef22e",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "google_sign_in_android-7.2.16.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/google_sign_in_ios-6.3.1.tar.gz",
+        "sha256": "88dd743aa3220eb5de814e471916f8281a5552d9a02ba2fc09ced7c787646180",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/google_sign_in_ios-6.3.1"
+    },
+    {
+        "type": "inline",
+        "contents": "88dd743aa3220eb5de814e471916f8281a5552d9a02ba2fc09ced7c787646180",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "google_sign_in_ios-6.3.1.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/google_sign_in_platform_interface-3.1.0.tar.gz",
+        "sha256": "7f59208c42b415a3cca203571128d6f84f885fead2d5b53eb65a9e27f2965bb5",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/google_sign_in_platform_interface-3.1.0"
+    },
+    {
+        "type": "inline",
+        "contents": "7f59208c42b415a3cca203571128d6f84f885fead2d5b53eb65a9e27f2965bb5",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "google_sign_in_platform_interface-3.1.0.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/google_sign_in_web-1.1.3.tar.gz",
+        "sha256": "d473003eeca892f96a01a64fc803378be765071cb0c265ee872c7f8683245d14",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/google_sign_in_web-1.1.3"
+    },
+    {
+        "type": "inline",
+        "contents": "d473003eeca892f96a01a64fc803378be765071cb0c265ee872c7f8683245d14",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "google_sign_in_web-1.1.3.sha256"
     },
     {
         "type": "archive",
@@ -1258,6 +1370,20 @@
         "contents": "41a20518f0cb1256669420fdba0cd90d21561e560ac240f26ef8322e45bb7ed6",
         "dest": ".pub-cache/hosted-hashes/pub.dev",
         "dest-filename": "mime-2.0.0.sha256"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://pub.dev/api/archives/msix-3.18.0.tar.gz",
+        "sha256": "61415c352e8aea084332b8a5514e6408c961c8cdeca202804fff1040eb555ac7",
+        "strip-components": 0,
+        "dest": ".pub-cache/hosted/pub.dev/msix-3.18.0"
+    },
+    {
+        "type": "inline",
+        "contents": "61415c352e8aea084332b8a5514e6408c961c8cdeca202804fff1040eb555ac7",
+        "dest": ".pub-cache/hosted-hashes/pub.dev",
+        "dest-filename": "msix-3.18.0.sha256"
     },
     {
         "type": "archive",

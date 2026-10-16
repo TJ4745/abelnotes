@@ -1,0 +1,30 @@
+name: Flatpak
+
+# Verifies that the offline manifest in flatpak/flathub-submission/ still builds
+# (sandboxed, no network after sources are fetched). Regenerate that directory
+# with flatpak-flutter when dependencies or the Flutter version change; see
+# flatpak/README.md.
+on:
+  push:
+    paths: ['flatpak/**', '.github/workflows/flatpak.yml']
+  pull_request:
+    paths: ['flatpak/**', '.github/workflows/flatpak.yml']
+  workflow_dispatch:
+
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: app.abelnotes.notes.flatpak
+          manifest-path: flatpak/flathub-submission/app.abelnotes.notes.yml
+          cache-key: flatpak-${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app.abelnotes.notes.flatpak
+          path: app.abelnotes.notes.flatpak

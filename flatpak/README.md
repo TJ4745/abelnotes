@@ -35,6 +35,13 @@ publishing through Flathub's website-verification flow.
 4. Verify the offline build, then update the Flathub repo with the contents of
    `flathub-submission/`.
 
+## CI
+
+`.github/workflows/flatpak.yml` builds `flathub-submission/` on every change
+under `flatpak/` and uploads the resulting `app.abelnotes.notes.flatpak` as an
+artifact, so a broken manifest or stale generated sources show up in the PR.
+Install the artifact with `flatpak install --user app.abelnotes.notes.flatpak`.
+
 ## Verifying the offline build
 
 Run this outside the source tree so the build artifacts do not land in the repo:
@@ -70,3 +77,17 @@ flatpak-builder --repo=repo --force-clean --sandbox --user \
 `tool/build_deb.sh` covers Debian/Ubuntu/Mint. Flathub covers Fedora, immutable
 distros and everyone installing through GNOME Software, KDE Discover or the
 Mint Software Manager. The two are complementary.
+
+## Sandbox caveats
+
+- **Data location**: notebooks live in `~/.var/app/app.abelnotes.notes/data/`,
+  not `~/.local/share/`, so notes from a native install are not picked up
+  automatically.
+- **Credentials**: stored through the Secret Service, so a host keyring must be
+  running, and logins saved by a native install must be entered again.
+- **Files outside `$HOME`** (other mounts, `/run/media`) need
+  `flatpak override --user --filesystem=/path app.abelnotes.notes`.
+- **Private CAs**: the host CA store is not visible, so a Nextcloud behind a
+  self-signed or private CA fails TLS until the CA is trusted another way.
+- **Pen-to-monitor restriction**: `xrandr`/`xinput` only see Xwayland inside the
+  sandbox, so the feature is not expected to work on Wayland.

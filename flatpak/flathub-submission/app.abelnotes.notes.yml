@@ -8,7 +8,7 @@
 
 app-id: app.abelnotes.notes
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.llvm20
@@ -66,9 +66,9 @@ modules:
       prepend-ld-library-path: /usr/lib/sdk/llvm20/lib
       env:
         PUB_CACHE: /run/build/abelnotes/.pub-cache
+        CXXFLAGS: -Wno-error=deprecated-literal-operator -Wno-deprecated-literal-operator
         CARGO_HOME: /run/build/abelnotes/cargo
         RUSTUP_HOME: /var/lib/rustup
-        CXXFLAGS: -Wno-error=deprecated-literal-operator -Wno-deprecated-literal-operator
     build-commands:
       - setup-flutter.sh
       - flutter config --enable-native-assets
@@ -83,13 +83,13 @@ modules:
     sources:
       - type: git
         url: https://github.com/abelnotes/abelnotes.git
-        tag: v0.37.2
+        tag: v0.37.7
+        commit: 1c4a6ff7788f57d6e1a46626dd66572ff14911e0
       - generated/sources/cargo.json
       - generated/sources/pubspec.json
     modules:
       - generated/modules/rustup-1.94.0.json
       - generated/modules/flutter-sdk-3.44.0.json
-
   - name: xrandr
     buildsystem: autotools
     cleanup:
@@ -98,7 +98,6 @@ modules:
       - type: archive
         url: https://www.x.org/releases/individual/app/xrandr-1.5.2.tar.xz
         sha256: c8bee4790d9058bacc4b6246456c58021db58a87ddda1a9d0139bf5f18f1f240
-
   - name: xinput
     buildsystem: autotools
     cleanup:
