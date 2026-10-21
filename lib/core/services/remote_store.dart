@@ -112,6 +112,19 @@ abstract class RemoteStore {
     bool skipVerify = false,
   });
 
+  /// [uploadFile] guarded by a precondition, for files several devices write.
+  ///
+  /// Writes only if the file still has [ifMatchVersion] (or, with [ifAbsent],
+  /// does not exist yet); otherwise throws a [RemoteStoreException] with
+  /// status 412 and leaves the file alone. WebDAV sends If-Match/If-None-Match;
+  /// Drive has no such header and checks the version just before the write.
+  Future<String?> uploadFileConditional(
+    String remotePath,
+    Uint8List data, {
+    String? ifMatchVersion,
+    bool ifAbsent = false,
+  });
+
   /// Idempotent: succeeds if the directory already exists.
   Future<void> createDirectory(String remotePath);
 

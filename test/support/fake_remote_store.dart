@@ -95,6 +95,26 @@ class FakeRemoteStore implements RemoteStore {
     return _versions[remotePath] = 'v${++_version}';
   }
 
+  /// Called just before a conditional upload checks its precondition: lets a
+  /// test play "another device wrote in between".
+  void Function(String path)? beforeConditionalCheck;
+
+  /// Gives [path] a new version, as any write by someone else would.
+  void bumpVersion(String path) => _versions[path] = 'v${++_version}';
+
+  @override
+  Future<String?> uploadFileConditional(String remotePath, Uint8List data,
+      {String? ifMatchVersion, bool ifAbsent = false}) async {
+    calls.add('upload-if $remotePath');
+    beforeConditionalCheck?.call(remotePath);
+    final exists = files.containsKey(remotePath);
+    if ((ifAbsent && exists) ||
+        (ifMatchVersion != null && _versions[remotePath] != ifMatchVersion)) {
+      throw RemoteStoreException('precondition failed: $remotePath', 412);
+    }
+    return uploadFile(remotePath, data);
+  }
+
   @override
   Future<void> createDirectory(String remotePath) async {
     calls.add('mkdir $remotePath');
@@ -124,7 +144,7 @@ class FakeRemoteStore implements RemoteStore {
   @override
   Future<String?> getVersion(String remotePath) async {
     calls.add('version $remotePath');
-    return _versions[remotePath];
+    return files.containsKey(remotePath) ? _versions[remotePath] : null;
   }
 
   @override

@@ -200,6 +200,28 @@ class GoogleDriveStore implements RemoteStore {
   }
 
   @override
+  Future<String?> uploadFileConditional(String remotePath, Uint8List data,
+      {String? ifMatchVersion, bool ifAbsent = false}) async {
+    // Drive has no If-Match for media updates: check just before the write.
+    // A write racing this check is repaired by the caller's next merge.
+    String? current;
+    try {
+      current = (await _metadata(remotePath))?['md5Checksum'] as String?;
+    } on RemoteStoreException catch (e) {
+      if (e.statusCode != 404) rethrow;
+      _forget(remotePath); // cached id of a file deleted meanwhile
+    }
+    if (ifAbsent && current != null) {
+      throw RemoteStoreException('precondition failed: $remotePath exists', 412);
+    }
+    if (ifMatchVersion != null && current != ifMatchVersion) {
+      throw RemoteStoreException(
+          'precondition failed: $remotePath changed', 412);
+    }
+    return uploadFile(remotePath, data);
+  }
+
+  @override
   Future<void> createDirectory(String remotePath) async {
     await _folderId(_asDir(remotePath), createMissing: true);
   }

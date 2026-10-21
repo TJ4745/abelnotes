@@ -407,4 +407,57 @@ void main() {
     expect(fake.seen[1].url.queryParameters['q'],
         contains(r"name = 'a\\b\'c.json'"));
   });
+
+  group('conditional upload', () {
+    final data = Uint8List.fromList([1, 2]);
+
+    test('writes over the version it was based on', () async {
+      fake.reply({'files': [{'id': 'folder-1'}]});
+      fake.reply({'files': [{'id': 'file-1'}]});
+      fake.reply({'id': 'file-1', 'md5Checksum': 'v1'}); // current version
+      fake.reply({'id': 'file-1', 'md5Checksum': 'v2'}); // the PATCH
+
+      final v = await store().uploadFileConditional('/AbelNotes/folders.json',
+          data, ifMatchVersion: 'v1');
+
+      expect(v, 'v2');
+      expect(fake.seen.last.method, 'PATCH');
+    });
+
+    test('refuses with 412 and writes nothing when the version moved', () async {
+      fake.reply({'files': [{'id': 'folder-1'}]});
+      fake.reply({'files': [{'id': 'file-1'}]});
+      fake.reply({'id': 'file-1', 'md5Checksum': 'other'});
+
+      await expectLater(
+        store().uploadFileConditional('/AbelNotes/folders.json', data,
+            ifMatchVersion: 'v1'),
+        throwsA(isA<RemoteStoreException>()
+            .having((e) => e.statusCode, 'statusCode', 412)),
+      );
+      expect(fake.seen.where((r) => r.method == 'PATCH' || r.method == 'POST'),
+          isEmpty);
+    });
+
+    test('ifAbsent creates a missing file and refuses an existing one',
+        () async {
+      fake.reply({'files': [{'id': 'folder-1'}]});
+      fake.reply({'files': []}); // not there
+      fake.reply({'files': []}); // upload looks again before creating
+      fake.reply({'id': 'file-new', 'md5Checksum': 'v1'});
+      final s = store();
+      await s.uploadFileConditional('/AbelNotes/folders.json', data,
+          ifAbsent: true);
+      expect(fake.seen.last.method, 'POST');
+
+      // Now it exists (id cached from the create).
+      fake.reply({'id': 'file-new', 'md5Checksum': 'v1'});
+      await expectLater(
+        s.uploadFileConditional('/AbelNotes/folders.json', data,
+            ifAbsent: true),
+        throwsA(isA<RemoteStoreException>()
+            .having((e) => e.statusCode, 'statusCode', 412)),
+      );
+    });
+  });
 }

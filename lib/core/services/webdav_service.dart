@@ -865,9 +865,28 @@ class WebDavService implements RemoteStore {
   /// real-world HTTP buffer/proxy would truncate them ([_uploadVerifyMin]).
   @override
   Future<String?> uploadFile(String remotePath, Uint8List data,
+          {int? timeoutSeconds,
+          bool criticalVerify = false,
+          bool skipVerify = false}) =>
+      _put(remotePath, data,
+          timeoutSeconds: timeoutSeconds,
+          criticalVerify: criticalVerify,
+          skipVerify: skipVerify);
+
+  @override
+  Future<String?> uploadFileConditional(String remotePath, Uint8List data,
+          {String? ifMatchVersion, bool ifAbsent = false}) =>
+      _put(remotePath, data, extraHeaders: {
+        if (ifMatchVersion != null)
+          'If-Match': '"${ifMatchVersion.replaceAll('"', '')}"',
+        if (ifAbsent) 'If-None-Match': '*',
+      });
+
+  Future<String?> _put(String remotePath, Uint8List data,
       {int? timeoutSeconds,
-       bool criticalVerify = false,
-       bool skipVerify = false}) async {
+      bool criticalVerify = false,
+      bool skipVerify = false,
+      Map<String, String> extraHeaders = const {}}) async {
     Object? lastError;
     for (var attempt = 0; attempt < _uploadMaxAttempts; attempt++) {
       try {
@@ -876,12 +895,18 @@ class WebDavService implements RemoteStore {
           headers: {
             ..._authHeaders,
             'Content-Type': 'application/octet-stream',
+            ...extraHeaders,
           },
           body: data,
         ).timeout(Duration(seconds: timeoutSeconds ?? AppConfig.webdavTimeoutSeconds));
 
         if (response.statusCode != 201 && response.statusCode != 204) {
-          _recordFailure('uploadFile', 'status ${response.statusCode}');
+          // A failed precondition is the server working, not a sick client.
+          if (response.statusCode == 412) {
+            _recordSuccess();
+          } else {
+            _recordFailure('uploadFile', 'status ${response.statusCode}');
+          }
           // 507 Insufficient Storage: the server has no room, and the retry
           // loop around this would only delay the same answer. Own type so
           // the app can say what happened instead of "sync failed".
