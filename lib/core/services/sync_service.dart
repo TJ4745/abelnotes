@@ -231,16 +231,21 @@ class SyncService {
 
   /// Lista i notebook .ncnote presenti sul server nella cartella base.
   /// Throws on network/server errors so the UI can show them.
-  Future<List<RemoteItem>> listRemoteNotebooks() async {
+  Future<List<RemoteItem>> listRemoteNotebooks() async =>
+      notebooksIn(await listRemoteRoot());
+
+  /// Everything directly under the remote base directory.
+  Future<List<RemoteItem>> listRemoteRoot() async {
     await _remote.ensureBaseDirectory();
-    final items = await _remote.listDirectory(_remote.basePath);
-    // Accepts both spellings even though uploads still write
-    // storageExtension: a notebook put there by hand, or by a future version
-    // that renames remote files, must not go missing.
-    return items
-        .where((item) => !item.isDirectory && AppConfig.isNotebookPath(item.name))
-        .toList();
+    return _remote.listDirectory(_remote.basePath);
   }
+
+  /// Accepts both spellings even though uploads still write
+  /// storageExtension: a notebook put there by hand, or by a future version
+  /// that renames remote files, must not go missing.
+  static List<RemoteItem> notebooksIn(Iterable<RemoteItem> root) => root
+      .where((item) => !item.isDirectory && AppConfig.isNotebookPath(item.name))
+      .toList();
 
   /// Upload di un notebook completo sul server.
   /// Extract symbol libraries from an .ncnote archive.

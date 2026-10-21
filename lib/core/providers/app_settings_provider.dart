@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:abelnotes/core/providers/canvas_state.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
+import 'package:abelnotes/core/services/folder_merge.dart';
+import 'package:abelnotes/shared/models/folder_doc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -78,11 +80,8 @@ class ToolDockConfig {
   }
 }
 
-/// A user-defined notebook folder. Local-only, like [AppSettings.favoriteNotebookIds]
-/// — folder membership doesn't sync across devices (same accepted trade-off
-/// favorites already ship with), so a real per-notebook `folderId` field
-/// living inside the synced `.ncnote` metadata isn't worth the sync/migration
-/// surface it would add.
+/// A user-defined notebook folder, as the library UI sees it. The synced
+/// source of truth is [AppSettings.folderDoc] (`folders.json` on the remote).
 class NotebookFolder {
   final String id;
   final String name;
@@ -103,9 +102,24 @@ class NotebookFolder {
 /// Combined settings blob so we only touch SharedPreferences once per write.
 class AppSettings {
   final Set<String> favoriteNotebookIds;
-  final List<NotebookFolder> folders;
+  final FolderDoc? _folderDoc;
+
+  /// Folders and notebook assignments with their sync stamps and tombstones.
+  FolderDoc get folderDoc => _folderDoc ?? FolderDoc.empty;
+
+  /// Local folder edits not yet merged into the remote `folders.json`.
+  final bool folderDirty;
+
+  /// Version of the remote `folders.json` this device last merged.
+  final String? folderRemoteVersion;
+
+  List<NotebookFolder> get folders => [
+        for (final e in folderDoc.liveFolders)
+          NotebookFolder(id: e.key, name: e.value.name)
+      ];
+
   /// notebookId → folderId. A notebook with no entry is unfiled.
-  final Map<String, String> notebookFolderId;
+  Map<String, String> get notebookFolderId => folderDoc.liveAssignments;
   final Map<String, DateTime> lastOpenedAt;
   final LibrarySortMode sortMode;
   final bool favoritesFirst;
@@ -172,8 +186,9 @@ class AppSettings {
 
   const AppSettings({
     this.favoriteNotebookIds = const {},
-    this.folders = const [],
-    this.notebookFolderId = const {},
+    FolderDoc? folderDoc,
+    this.folderDirty = false,
+    this.folderRemoteVersion,
     this.lastOpenedAt = const {},
     this.sortMode = LibrarySortMode.modifiedDesc,
     this.favoritesFirst = true,
@@ -190,7 +205,7 @@ class AppSettings {
     this.syncBackend,
     this.showPageStrip = true,
     this.localeCode = 'system',
-  });
+  }) : _folderDoc = folderDoc;
 
   /// The 3-slot preset rail belonging to [tool], defaulting to all-empty
   /// when that tool has never saved one. Always a fresh list — never
@@ -201,8 +216,10 @@ class AppSettings {
 
   AppSettings copyWith({
     Set<String>? favoriteNotebookIds,
-    List<NotebookFolder>? folders,
-    Map<String, String>? notebookFolderId,
+    FolderDoc? folderDoc,
+    bool? folderDirty,
+    String? folderRemoteVersion,
+    bool clearFolderRemoteVersion = false,
     Map<String, DateTime>? lastOpenedAt,
     LibrarySortMode? sortMode,
     bool? favoritesFirst,
@@ -226,8 +243,11 @@ class AppSettings {
   }) =>
       AppSettings(
         favoriteNotebookIds: favoriteNotebookIds ?? this.favoriteNotebookIds,
-        folders: folders ?? this.folders,
-        notebookFolderId: notebookFolderId ?? this.notebookFolderId,
+        folderDoc: folderDoc ?? _folderDoc,
+        folderDirty: folderDirty ?? this.folderDirty,
+        folderRemoteVersion: clearFolderRemoteVersion
+            ? null
+            : (folderRemoteVersion ?? this.folderRemoteVersion),
         lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
         sortMode: sortMode ?? this.sortMode,
         favoritesFirst: favoritesFirst ?? this.favoritesFirst,
@@ -252,8 +272,13 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
   static const _prefsKey = 'app_settings_v1';
 
   AppSettingsNotifier() : super(const AppSettings()) {
-    _load();
+    ready = _load();
   }
+
+  /// Completes once the stored settings are in [state].
+  late final Future<void> ready;
+
+  static int _nowMs() => DateTime.now().toUtc().millisecondsSinceEpoch;
 
   Future<void> _load() async {
     try {
@@ -297,18 +322,34 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
           ? const ToolDockConfig()
           : ToolDockConfig.fromJson(dockRaw);
 
-      final foldersRaw = (map['folders'] as List?) ?? const [];
-      final folders = [
-        for (final f in foldersRaw)
-          if (f is Map) NotebookFolder.fromJson(f.cast<String, dynamic>()),
-      ];
-      final notebookFolderId =
-          (map['notebook_folder'] as Map?)?.cast<String, String>() ?? const {};
+      // Installs from before folders synced only have the plain lists: stamp
+      // them once and persist, so the stamps stay stable from then on.
+      final FolderDoc folderDoc;
+      final docRaw = map['folder_doc'];
+      var migrated = false;
+      if (docRaw is Map) {
+        folderDoc = FolderDoc.fromJson(docRaw);
+      } else {
+        final foldersRaw = (map['folders'] as List?) ?? const [];
+        final legacy = [
+          for (final f in foldersRaw)
+            if (f is Map) NotebookFolder.fromJson(f.cast<String, dynamic>()),
+        ];
+        final assign = (map['notebook_folder'] as Map?)
+                ?.map((k, v) => MapEntry(k as String, v as String)) ??
+            const <String, String>{};
+        folderDoc = FolderDoc.fromLegacy(
+            [for (final f in legacy) (id: f.id, name: f.name)],
+            assign,
+            _nowMs());
+        migrated = !folderDoc.isEmpty;
+      }
 
       state = AppSettings(
         favoriteNotebookIds: favIds,
-        folders: folders,
-        notebookFolderId: notebookFolderId,
+        folderDoc: folderDoc,
+        folderDirty: migrated || (map['folder_dirty'] as bool? ?? false),
+        folderRemoteVersion: map['folder_remote_version'] as String?,
         lastOpenedAt: opened,
         sortMode: sort,
         favoritesFirst: favFirst,
@@ -326,6 +367,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
         showPageStrip: map['show_page_strip'] as bool? ?? true,
         localeCode: map['locale'] as String? ?? 'system',
       );
+      if (migrated) await _persist();
     } catch (_) {}
   }
 
@@ -334,8 +376,13 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, jsonEncode({
         'fav': state.favoriteNotebookIds.toList(),
+        // Plain lists stay for older builds; folder_doc is what this one reads.
         'folders': state.folders.map((f) => f.toJson()).toList(),
         'notebook_folder': state.notebookFolderId,
+        'folder_doc': state.folderDoc.toJson(),
+        'folder_dirty': state.folderDirty,
+        if (state.folderRemoteVersion != null)
+          'folder_remote_version': state.folderRemoteVersion,
         'opened': state.lastOpenedAt
             .map((k, v) => MapEntry(k, v.toIso8601String())),
         'sort': state.sortMode.name,
@@ -493,57 +540,56 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
   void purgeNotebook(String notebookId) {
     final favs = Set<String>.from(state.favoriteNotebookIds)..remove(notebookId);
     final opened = Map<String, DateTime>.from(state.lastOpenedAt)..remove(notebookId);
-    final folderAssign = Map<String, String>.from(state.notebookFolderId)
-      ..remove(notebookId);
+    final doc = state.folderDoc.withAssignment(notebookId, null, _nowMs());
     state = state.copyWith(
       favoriteNotebookIds: favs,
       lastOpenedAt: opened,
-      notebookFolderId: folderAssign,
+      folderDoc: doc,
+      folderDirty: state.folderDirty || !identical(doc, state.folderDoc),
     );
+    _persist();
+  }
+
+  void _editFolders(FolderDoc Function(FolderDoc doc, int now) edit) {
+    final doc = edit(state.folderDoc, _nowMs());
+    if (identical(doc, state.folderDoc)) return;
+    state = state.copyWith(folderDoc: doc, folderDirty: true);
     _persist();
   }
 
   void createFolder(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
-    final next = List<NotebookFolder>.from(state.folders)
-      ..add(NotebookFolder(id: const Uuid().v4(), name: trimmed));
-    state = state.copyWith(folders: next);
-    _persist();
+    _editFolders((d, now) =>
+        d.withFolderCreated(const Uuid().v4(), trimmed, now));
   }
 
   void renameFolder(String folderId, String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
-    final next = [
-      for (final f in state.folders)
-        if (f.id == folderId) f.copyWith(name: trimmed) else f,
-    ];
-    state = state.copyWith(folders: next);
-    _persist();
+    _editFolders((d, now) => d.withFolderRenamed(folderId, trimmed, now));
   }
 
-  /// Deletes the folder and unfiles every notebook that was in it (they
-  /// stay in the library, just with no folder assigned).
-  void deleteFolder(String folderId) {
-    final next = List<NotebookFolder>.from(state.folders)
-      ..removeWhere((f) => f.id == folderId);
-    final assign = Map<String, String>.from(state.notebookFolderId)
-      ..removeWhere((_, v) => v == folderId);
-    state = state.copyWith(folders: next, notebookFolderId: assign);
-    _persist();
-  }
+  /// Deletes the folder; its notebooks stay in the library, unfiled.
+  void deleteFolder(String folderId) =>
+      _editFolders((d, now) => d.withFolderDeleted(folderId, now));
 
   /// Assigns [notebookId] to [folderId], or unfiles it when null.
-  void setNotebookFolder(String notebookId, String? folderId) {
-    final next = Map<String, String>.from(state.notebookFolderId);
-    if (folderId == null) {
-      next.remove(notebookId);
-    } else {
-      next[notebookId] = folderId;
-    }
-    state = state.copyWith(notebookFolderId: next);
-    _persist();
+  void setNotebookFolder(String notebookId, String? folderId) => _editFolders(
+      (d, now) => d.withAssignment(notebookId, folderId, now));
+
+  /// Adopts the outcome of a folder sync. Edits made while it ran are merged
+  /// back in, and stay dirty if the synced document does not contain them.
+  Future<void> applyFolderSync(FolderDoc synced, String? remoteVersion) async {
+    await ready;
+    final merged = mergeFolderDocs(state.folderDoc, synced, nowMs: _nowMs());
+    state = state.copyWith(
+      folderDoc: merged.sameContent(state.folderDoc) ? null : merged,
+      folderDirty: !merged.sameContent(synced),
+      folderRemoteVersion: remoteVersion,
+      clearFolderRemoteVersion: remoteVersion == null,
+    );
+    await _persist();
   }
 }
 

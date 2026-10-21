@@ -107,6 +107,24 @@ Each `ContentElement` (and the page's `BackgroundLayer`) is compared against the
 
 For a real conflict, the user gets a dedicated resolution screen: local vs. remote previews of the page side by side, a diff summary (strokes/images/shapes/text changed), and a per-page choice — keep local or accept remote (with bulk actions once there are more than a few conflicting pages). A remote deletion clashing with a local edit is shown as its own case, distinct from a content conflict.
 
+## Library folders
+
+Folders and the notebook-to-folder assignment sync through one file, `folders.json`, at the root of the remote AbelNotes directory. It is deliberately not a field in each notebook's `metadata.json`: an older app rewriting that file would silently drop the field, and mixed app versions are normal.
+
+```
+{"version":1,
+ "folders":     {id: {name, createdAt, updatedAt, deleted?}},
+ "assignments": {notebookId: {folderId | null, updatedAt}}}
+```
+
+- Merge is per entry, newest `updatedAt` (UTC ms) wins, so two devices editing different folders never clobber each other. A local edit is stamped past the entry's previous stamp even when the device clock is behind.
+- Deleting a folder leaves a tombstone (90 days, then pruned). A rename newer than the delete brings the folder back; a notebook assigned to a deleted folder reads as unfiled.
+- Assignments are keyed by notebook id and kept for notebooks not downloaded on this device.
+- The file is written with `If-Match` (WebDAV) or a version check (Drive); a lost race re-reads and merges again, three attempts at most, then the next library refresh retries. A file with `version` above the supported one, or unparseable, is never overwritten.
+- The check rides on the root listing the library refresh already fetches: no folders anywhere means no extra request.
+
+Code: `folder_doc.dart` (model), `folder_merge.dart` (pure merge), `folder_sync_service.dart` (remote protocol), `folder_sync_provider.dart` (when it runs).
+
 ## Performance targets
 
 | Metric | Target | How |

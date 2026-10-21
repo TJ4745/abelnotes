@@ -217,6 +217,11 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     });
     final tray = ref.watch(pagesTrayProvider.select((s) => s.tray));
 
+    // The selected folder may have been deleted on another device.
+    if (_selectedFolderId != null &&
+        !settings.folders.any((f) => f.id == _selectedFolderId)) {
+      _selectedFolderId = null;
+    }
     final entries = asyncList.valueOrNull ?? const <NotebookEntry>[];
     final filtered =
         _filterAndSort(entries, settings, _query, _selectedFolderId);
@@ -1302,8 +1307,8 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     }
   }
 
-  /// Folder membership is local-only (see [NotebookFolder]) — this just
-  /// reassigns [AppSettings.notebookFolderId], no notebook file I/O.
+  /// Reassigns [AppSettings.notebookFolderId]; no notebook file I/O, the
+  /// change syncs through folders.json.
   Future<void> _showMoveToFolderSheet(NotebookEntry entry) async {
     final l10n = AppLocalizations.of(context);
     final settingsNotifier = ref.read(appSettingsProvider.notifier);

@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:abelnotes/config/app_config.dart';
+import 'package:abelnotes/core/providers/folder_sync_provider.dart';
 import 'package:abelnotes/core/providers/remote_store_provider.dart';
 import 'package:abelnotes/core/providers/canvas_provider.dart' show canvasProvider;
 import 'package:abelnotes/core/providers/offline_providers.dart';
@@ -105,6 +106,7 @@ final notebookListProvider =
     StateNotifierProvider<NotebookListNotifier, AsyncValue<List<NotebookEntry>>>(
         (ref) {
   final notifier = NotebookListNotifier(ref);
+  ref.read(folderSyncProvider); // starts the edit-triggered folder sync
   // Connecting, disconnecting or re-authenticating changes what every card
   // should say; the list was only rebuilt on the next refresh.
   ref.listen(remoteStoreProvider, (prev, next) {
@@ -344,8 +346,10 @@ class NotebookListNotifier
     FileService fileService,
   ) async {
     await remote.ensureBaseDirectory();
+    final root = await syncService.listRemoteRoot();
+    unawaited(_ref.read(folderSyncProvider).sync(root: root));
     final remoteFiles = await _adoptStorageExtension(
-        remote, syncService, await syncService.listRemoteNotebooks());
+        remote, syncService, SyncService.notebooksIn(root));
     debugPrint('[Library] PROPFIND returned ${remoteFiles.length} .ncnote files');
 
     // Build map of locally cached ETags keyed by remote path, without the
