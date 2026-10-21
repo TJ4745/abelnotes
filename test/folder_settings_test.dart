@@ -124,4 +124,57 @@ void main() {
     expect(n.state.folderDirty, isFalse);
     expect((await _stored())['folder_remote_version'], 'v7');
   });
+
+  group('legacy folders lose to any real remote entry', () {
+    const legacy = {
+      'folders': [
+        {'id': 'old-f', 'name': 'Old local'},
+        {'id': 'tomb-f', 'name': 'Deleted elsewhere'},
+      ],
+      'notebook_folder': {'nb-moved': 'old-f', 'nb-into-tomb': 'tomb-f'},
+    };
+
+    FolderDoc remote() => FolderDoc.empty
+        .withFolderCreated('r-f', 'Remote', 5000)
+        .withFolderCreated('tomb-f', 'Deleted elsewhere', 5001)
+        .withFolderDeleted('tomb-f', 6000)
+        .withAssignment('nb-moved', 'r-f', 7000);
+
+    test('a newer remote assignment beats the migrated one', () async {
+      final n = await _boot(legacy);
+      await n.applyFolderSync(remote(), 'v1');
+      expect(n.state.notebookFolderId['nb-moved'], 'r-f');
+    });
+
+    test('a folder the remote deleted stays deleted, members unfiled',
+        () async {
+      final n = await _boot(legacy);
+      await n.applyFolderSync(remote(), 'v1');
+      expect(n.state.folders.map((f) => f.id), contains('old-f'));
+      expect(n.state.folders.map((f) => f.id), isNot(contains('tomb-f')));
+      expect(n.state.notebookFolderId.containsKey('nb-into-tomb'), isFalse);
+    });
+
+    test('folders and assignments the remote lacks are kept and dirty',
+        () async {
+      final n = await _boot(legacy);
+      final r = FolderDoc.empty.withFolderCreated('r-f', 'Remote', 5000);
+      await n.applyFolderSync(r, 'v1');
+      expect(n.state.folders.map((f) => f.id), containsAll(['old-f', 'r-f']));
+      expect(n.state.notebookFolderId['nb-moved'], 'old-f');
+      expect(n.state.folderDirty, isTrue, reason: 'still has to be uploaded');
+    });
+
+    test('the stamp is the same on every load and a real edit beats it',
+        () async {
+      final n = await _boot(legacy);
+      final stamp = n.state.folderDoc.assignments['nb-moved']!.updatedAt;
+      final again = AppSettingsNotifier();
+      await again.ready;
+      expect(again.state.folderDoc.assignments['nb-moved']!.updatedAt, stamp);
+      again.setNotebookFolder('nb-moved', null);
+      expect(again.state.folderDoc.assignments['nb-moved']!.updatedAt,
+          greaterThan(stamp));
+    });
+  });
 }

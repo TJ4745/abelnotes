@@ -322,8 +322,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
           ? const ToolDockConfig()
           : ToolDockConfig.fromJson(dockRaw);
 
-      // Installs from before folders synced only have the plain lists: stamp
-      // them once and persist, so the stamps stay stable from then on.
+      // Installs from before folders synced only have the plain lists: they
+      // get the legacy stamp and are persisted in the new shape.
       final FolderDoc folderDoc;
       final docRaw = map['folder_doc'];
       var migrated = false;
@@ -339,9 +339,7 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
                 ?.map((k, v) => MapEntry(k as String, v as String)) ??
             const <String, String>{};
         folderDoc = FolderDoc.fromLegacy(
-            [for (final f in legacy) (id: f.id, name: f.name)],
-            assign,
-            _nowMs());
+            [for (final f in legacy) (id: f.id, name: f.name)], assign);
         migrated = !folderDoc.isEmpty;
       }
 

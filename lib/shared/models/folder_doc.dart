@@ -182,22 +182,27 @@ class FolderDoc {
     );
   }
 
+  /// Stamp of entries that predate sync: older than any real edit, so they
+  /// lose to whatever the remote already has but still upload when it has none.
+  static const legacyStamp = 1;
+
   /// Doc for a pre-sync install: the old local folders and assignments,
-  /// stamped [nowMs] (+ index, so the creation order survives).
+  /// all stamped [legacyStamp] (createdAt + index keeps the order).
   static FolderDoc fromLegacy(
     List<({String id, String name})> folders,
     Map<String, String> assignments,
-    int nowMs,
   ) {
     return FolderDoc(
       folders: {
         for (var i = 0; i < folders.length; i++)
           folders[i].id: FolderEntry(
-              name: folders[i].name, createdAt: nowMs + i, updatedAt: nowMs),
+              name: folders[i].name,
+              createdAt: legacyStamp + i,
+              updatedAt: legacyStamp),
       },
       assignments: {
         for (final e in assignments.entries)
-          e.key: AssignmentEntry(folderId: e.value, updatedAt: nowMs),
+          e.key: AssignmentEntry(folderId: e.value, updatedAt: legacyStamp),
       },
     );
   }

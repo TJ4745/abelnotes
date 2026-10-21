@@ -288,14 +288,44 @@ void main() {
       expect(a.sameContent(b), isTrue);
     });
 
-    test('legacy local state migrates with a stable stamp and order', () {
+    test('legacy local state migrates with the sentinel stamp and order', () {
       final d = FolderDoc.fromLegacy([
         (id: 'a', name: 'First'),
         (id: 'b', name: 'Second'),
-      ], {'nb': 'b'}, 5000);
+      ], {'nb': 'b'});
       expect(d.liveFolders.map((e) => e.key), ['a', 'b']);
       expect(d.liveAssignments, {'nb': 'b'});
-      expect(d.folders['a']!.updatedAt, 5000);
+      expect(d.folders['a']!.updatedAt, FolderDoc.legacyStamp);
+    });
+
+    test('legacy entries lose to every real remote entry, either order', () {
+      final legacy = FolderDoc.fromLegacy(
+          [(id: 'f', name: 'Local name'), (id: 'dead', name: 'Gone')],
+          {'nb': 'f', 'nb2': 'dead'});
+      final remote = FolderDoc.empty
+          .withFolderCreated('f', 'Remote name', 100)
+          .withFolderCreated('dead', 'Gone', 100)
+          .withFolderDeleted('dead', 200)
+          .withFolderCreated('g', 'G', 100)
+          .withAssignment('nb', 'g', 300);
+      for (final m in [_merge(legacy, remote), _merge(remote, legacy)]) {
+        expect(m.folders['f']!.name, 'Remote name');
+        expect(m.liveAssignments, {'nb': 'g'});
+        expect(m.folders['dead']!.deleted, isTrue, reason: 'not revived');
+      }
+    });
+
+    test('legacy entries the remote lacks survive, and a real edit beats them',
+        () {
+      final legacy =
+          FolderDoc.fromLegacy([(id: 'f', name: 'Only here')], {'nb': 'f'});
+      final m = _merge(legacy, FolderDoc.empty.withFolderCreated('x', 'X', 50),
+          now: 10 * _day);
+      expect(m.liveFolders.map((e) => e.key), containsAll(['f', 'x']));
+      expect(m.liveAssignments, {'nb': 'f'});
+      final edited = m.withFolderRenamed('f', 'Renamed', 20);
+      expect(_merge(edited, legacy, now: 10 * _day).folders['f']!.name,
+          'Renamed');
     });
   });
 }
