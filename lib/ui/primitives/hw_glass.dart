@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/hw_theme.dart';
@@ -39,11 +40,15 @@ class HwGlass extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = HwThemeScope.of(context);
     final solid = MediaQuery.maybeHighContrastOf(context) ?? false;
+    // Web gets no backdrop blur (CanvasKit redoes it on every frame), so
+    // the fill turns opaque, like iOS with Reduce Transparency.
     final fill = solid
         ? p.paper0
-        : strong
-            ? Color.alphaBlend(p.glass, p.paper0).withValues(alpha: 0.9)
-            : p.glass;
+        : kIsWeb
+            ? Color.alphaBlend(p.glass, p.paper0)
+            : strong
+                ? Color.alphaBlend(p.glass, p.paper0).withValues(alpha: 0.9)
+                : p.glass;
     Widget body = DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
@@ -67,13 +72,15 @@ class HwGlass extends StatelessWidget {
       ]);
       body = ClipRRect(
         borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.compose(
-            outer: const ColorFilter.matrix(_saturate),
-            inner: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          ),
-          child: body,
-        ),
+        child: kIsWeb
+            ? body
+            : BackdropFilter(
+                filter: ui.ImageFilter.compose(
+                  outer: const ColorFilter.matrix(_saturate),
+                  inner: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                ),
+                child: body,
+              ),
       );
     }
     if (!shadow) return body;
@@ -87,7 +94,8 @@ class HwGlass extends StatelessWidget {
               color: s.color,
               blurRadius: s.blurRadius,
               offset: s.offset,
-              blurStyle: BlurStyle.outer,
+              // Normal on web: the only style Skia draws analytically.
+              blurStyle: kIsWeb ? BlurStyle.normal : BlurStyle.outer,
             ),
         ],
       ),

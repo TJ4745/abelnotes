@@ -41,6 +41,15 @@ becomes a solid surface with a visible border.
 The library bar is clear while the list is at rest and turns into glass only
 once content scrolls under it, with blur and fill growing together.
 
+On the web build the glass has no backdrop blur. CanvasKit has no raster
+cache, so every frame in which anything moves (a stroke, a scroll, the dock)
+re-blurs every glass surface on screen, which is what made the chrome lag in
+iPad Safari. The fill becomes opaque instead, as iOS does with Reduce
+Transparency, and the shadow uses the normal blur style, the only one Skia
+draws analytically. The notebook-open transition does not fade the page in on
+the web either, since that costs a full-screen layer per frame; the cover
+dissolving on top already hides the page early on.
+
 ## Motion
 
 Springs are described the way Apple's design talks describe them, with a

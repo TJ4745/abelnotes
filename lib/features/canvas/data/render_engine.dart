@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:abelnotes/config/app_config.dart';
 import 'package:abelnotes/core/providers/canvas_provider.dart';
 import 'package:abelnotes/features/canvas/data/math_rasterizer.dart';
+import 'package:abelnotes/features/canvas/data/zoom_snapshot.dart';
 import 'package:abelnotes/features/canvas/data/text_paragraph_factory.dart';
 import 'package:abelnotes/shared/models/ncnote_format.dart';
 
@@ -219,6 +220,10 @@ class CanvasRenderEngine extends CustomPainter {
   /// shadow + border so the big sheet reads as an edgeless whiteboard. MUST
   /// mirror [CanvasScreen]'s `_getRenderScale`/`_getCenterOffset`.
   final bool infiniteCanvas;
+  /// Raster stand-in used while the zoom is moving (web only, see [ZoomSnapshot]).
+  final ZoomSnapshot? zoomSnapshot;
+  /// Device pixels per logical pixel, sizes the zoom snapshot.
+  final double devicePixelRatio;
   final Map<String, ui.Image> imageCache;
   /// Live-read access to the imageCache for callers that own a long-lived
   /// painter whose enclosing widget does NOT rebuild on cache updates (the
@@ -288,6 +293,8 @@ class CanvasRenderEngine extends CustomPainter {
     this.zoom = 1.0,
     this.panOffset = Offset.zero,
     this.infiniteCanvas = false,
+    this.zoomSnapshot,
+    this.devicePixelRatio = 2.0,
     this.imageCache = const {},
     this.liveImageCacheGetter,
     this.corruptAssetIds = const <String>{},
@@ -417,7 +424,14 @@ class CanvasRenderEngine extends CustomPainter {
               imageSig: imageSig,
             )
           : null;
-      if (cached != null) {
+      final snap = zoomSnapshot;
+      final zoomingNow = snap != null &&
+          !infiniteCanvas &&
+          allImagesReady &&
+          snap.track(zoom, pageData);
+      if (zoomingNow && _paintZoomSnapshot(canvas, snap, cached, lassoSel, imageSig, selectedIdsSet, selDragOffset, selRotation, selScale, selCenter, baseScale)) {
+        // snapshot drawn
+      } else if (cached != null) {
         canvas.drawPicture(cached);
       } else {
         final recorder = ui.PictureRecorder();
@@ -506,6 +520,69 @@ class CanvasRenderEngine extends CustomPainter {
 
     canvas.restore();
   }
+
+  /// Draws the zoom snapshot (building it from the vector picture on the
+  /// first moving frame). False = could not, caller paints the vector path.
+  bool _paintZoomSnapshot(
+    Canvas canvas,
+    ZoomSnapshot snap,
+    ui.Picture? cached,
+    LassoSelection? lassoSel,
+    int imageSig,
+    Set<String> Function() selectedIdsSet,
+    Offset selDragOffset,
+    double selRotation,
+    double selScale,
+    Offset selCenter,
+    double baseScale,
+  ) {
+    final lassoKey = _StaticPictureCache._lassoKey(lassoSel);
+    var img = snap.lookup(pageData, lassoKey, imageSig);
+    var region = snap.region;
+    if (img == null) {
+      try {
+        var pic = cached;
+        if (pic == null) {
+          final rec = ui.PictureRecorder();
+          _paintStaticLayers(Canvas(rec), selectedIdsSet(), selDragOffset,
+              selRotation, selScale, selCenter, false);
+          pic = rec.endRecording();
+          _staticPictureCache.store(
+              pageData: pageData,
+              zoom: zoom,
+              lassoSelection: lassoSel,
+              imageSig: imageSig,
+              picture: pic);
+        }
+        // Page plus the drop shadow; pixel density follows the screen, capped.
+        region = Rect.fromLTWH(-4, -4, pageData.width + 14, pageData.height + 14);
+        final want = zoom * baseScale * devicePixelRatio;
+        final px = min(want, _kSnapshotMaxPx / max(region.width, region.height));
+        final w = (region.width * px).ceil(), h = (region.height * px).ceil();
+        final rec = ui.PictureRecorder();
+        Canvas(rec)
+          ..scale(w / region.width, h / region.height)
+          ..translate(-region.left, -region.top)
+          ..drawPicture(pic);
+        final snapPic = rec.endRecording();
+        img = snapPic.toImageSync(w, h);
+        snapPic.dispose();
+        snap.store(img, pageData, lassoKey, imageSig, region);
+      } catch (_) {
+        snap.markBroken();
+        return false;
+      }
+    }
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+      region,
+      Paint()..filterQuality = FilterQuality.low,
+    );
+    return true;
+  }
+
+  static const double _kSnapshotMaxPx = 2048;
 
   /// Layers 0-3 of [paint]: shadow, background, border, content. Recorded
   /// into a `ui.Picture` once per (pageData, zoom-bucket, lassoSelection)

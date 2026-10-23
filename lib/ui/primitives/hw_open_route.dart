@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
@@ -73,10 +74,14 @@ class HwOpenRoute<T> extends PageRouteBuilder<T> {
               maxHeight: size.height,
               child: Transform.translate(
                 offset: -rect.topLeft,
-                child: Opacity(
-                  opacity: ((t - 0.15) / 0.45).clamp(0.0, 1.0),
-                  child: child,
-                ),
+                // Web skips the fade, a full-screen layer per frame there;
+                // the cover on top already hides the page early on.
+                child: kIsWeb
+                    ? child
+                    : Opacity(
+                        opacity: ((t - 0.15) / 0.45).clamp(0.0, 1.0),
+                        child: child,
+                      ),
               ),
             ),
             // The cover dissolves into the page.

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
 import '../theme/hw_theme.dart';
@@ -142,12 +143,17 @@ class NotebookCover extends StatelessWidget {
                   right: small ? width * 0.09 : 18,
                   top: small ? height * 0.15 : 40,
                   bottom: small ? height * 0.19 : 50,
-                  child: Opacity(
-                    opacity: 0.35,
-                    child: CustomPaint(
-                      painter: _TexturePainter(texture: texture),
-                    ),
-                  ),
+                  // Web paints the alpha in: an Opacity layer per cover is
+                  // re-rasterized on every scroll frame there.
+                  child: kIsWeb
+                      ? CustomPaint(
+                          painter: _TexturePainter(texture: texture, alpha: 0.35))
+                      : Opacity(
+                          opacity: 0.35,
+                          child: CustomPaint(
+                            painter: _TexturePainter(texture: texture),
+                          ),
+                        ),
                 )
               else
                 Positioned(
@@ -369,12 +375,14 @@ class CoverPatternPainter extends CustomPainter {
 
 class _TexturePainter extends CustomPainter {
   final BackgroundTexture texture;
-  _TexturePainter({required this.texture});
+  final double alpha;
+  _TexturePainter({required this.texture, this.alpha = 1});
 
   @override
   void paint(Canvas canvas, Size size) {
+    final white = Colors.white.withValues(alpha: alpha);
     final paint = Paint()
-      ..color = Colors.white
+      ..color = white
       ..strokeWidth = 0.8
       ..style = PaintingStyle.stroke;
     final w = size.width, h = size.height;
@@ -396,7 +404,7 @@ class _TexturePainter extends CustomPainter {
         }
         break;
       case BackgroundTexture.dots:
-        final dot = Paint()..color = Colors.white;
+        final dot = Paint()..color = white;
         for (var y = m; y <= h - m; y += (h - 2 * m) / 5) {
           for (var x = m; x <= w - m; x += (w - 2 * m) / 4) {
             canvas.drawCircle(Offset(x, y), 1.2, dot);
@@ -414,5 +422,6 @@ class _TexturePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_TexturePainter old) => old.texture != texture;
+  bool shouldRepaint(_TexturePainter old) =>
+      old.texture != texture || old.alpha != alpha;
 }

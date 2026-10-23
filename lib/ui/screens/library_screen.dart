@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -2163,6 +2164,20 @@ class _TopBar extends StatelessWidget {
           final y = scroll.hasClients ? scroll.offset : 0.0;
           final edge = (y / 20).clamp(0.0, 1.0);
           if (edge == 0) return child!;
+          // Web: fill only, no blur (see HwGlass).
+          if (kIsWeb) {
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color.alphaBlend(p.glass, p.paper1)
+                    .withValues(alpha: edge),
+                border: Border(
+                    bottom: BorderSide(
+                        color: p.glassLine
+                            .withValues(alpha: p.glassLine.a * edge))),
+              ),
+              child: child,
+            );
+          }
           // Materialize: blur and fill grow together with the scroll.
           return ClipRect(
             child: BackdropFilter(

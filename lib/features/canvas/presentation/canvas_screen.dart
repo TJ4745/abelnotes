@@ -26,6 +26,7 @@ import 'package:abelnotes/core/providers/pending_import_provider.dart';
 import 'package:abelnotes/core/providers/preset_colors_provider.dart';
 import 'package:abelnotes/core/services/sync_service.dart' as sync_svc;
 import 'package:abelnotes/features/canvas/data/render_engine.dart';
+import 'package:abelnotes/features/canvas/data/zoom_snapshot.dart';
 import 'package:abelnotes/features/canvas/data/math_rasterizer.dart';
 import 'package:abelnotes/features/canvas/data/pdf_export.dart';
 import 'package:abelnotes/features/canvas/data/pdf_import_support.dart';
@@ -386,7 +387,10 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // rebuilding the composite on every parent rebuild (each new merge re-
   // subscribes to both underlying notifiers, which is non-trivial work on
   // the hot draw path).
+  // Web only: raster stand-in while zooming, repaints crisp once it settles.
+  final ZoomSnapshot _zoomSnapshot = ZoomSnapshot();
   late final Listenable _repaintNotifier = Listenable.merge([
+    _zoomSnapshot,
     _activeStrokeNotifier,
     _lassoPathNotifier,
     _lassoTransformNotifier,
@@ -1451,6 +1455,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
   @override
   void dispose() {
+    _zoomSnapshot.dispose();
     webTouchDevice.removeListener(_onWebTouchDeviceChanged);
     _dockFlyX.dispose();
     _dockFlyY.dispose();
@@ -5556,6 +5561,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                                 zoom: s.zoom,
                                 panOffset: s.panOffset,
                                 infiniteCanvas: s.isScratch,
+                                zoomSnapshot: kIsWeb ? _zoomSnapshot : null,
+                                devicePixelRatio:
+                                    MediaQuery.of(context).devicePixelRatio,
                                 imageCache: s.imageCache,
                                 // This Consumer intentionally doesn't watch
                                 // s.imageCache (avoids a per-decode rebuild
