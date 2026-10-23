@@ -2997,4 +2997,420 @@ class AppLocalizationsZh extends AppLocalizations {
   String libImportSuccessMany(int count) {
     return '已导入 $count 个笔记本';
   }
+
+  @override
+  String get pgtTitlePages => '页面';
+
+  @override
+  String pgtEyebrow(String notebook, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '$notebook · $_temp0';
+  }
+
+  @override
+  String get pgtSelect => '选择';
+
+  @override
+  String get pgtSelectPages => '选择页面';
+
+  @override
+  String get pgtAll => '全部';
+
+  @override
+  String get pgtNone => '无';
+
+  @override
+  String get pgtDone => '完成';
+
+  @override
+  String get pgtNoChapter => '无章节';
+
+  @override
+  String get pgtCopy => '复制';
+
+  @override
+  String get pgtMove => '移动';
+
+  @override
+  String get pgtTagMoving => '移动中';
+
+  @override
+  String get pgtHintPlaceMove => '点按一页，将页面放在它之后；点按它的左边缘，则放在它之前。确认之前不会有任何改动。';
+
+  @override
+  String get pgtHintPlaceCopy => '点按一页，将页面粘贴到它之后；点按它的左边缘，则粘贴到它之前。';
+
+  @override
+  String get pgtMoveHere => '移到此处';
+
+  @override
+  String get pgtPasteHere => '粘贴到此处';
+
+  @override
+  String get pgtMoveShort => '移动';
+
+  @override
+  String get pgtPasteShort => '粘贴';
+
+  @override
+  String pgtPasteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '粘贴 $_temp0';
+  }
+
+  @override
+  String pgtPasteCountShort(int count) {
+    return '粘贴 $count';
+  }
+
+  @override
+  String get pgtThisNotebook => '当前笔记本';
+
+  @override
+  String get pgtAnotherNotebook => '其他笔记本…';
+
+  @override
+  String pgtMoveToNb(String notebook) {
+    return '移到 $notebook';
+  }
+
+  @override
+  String pgtPasteIntoNb(String notebook) {
+    return '粘贴到 $notebook';
+  }
+
+  @override
+  String get pgtPosStart => '在开头';
+
+  @override
+  String pgtPosAfter(int page) {
+    return '在第 $page 页之后';
+  }
+
+  @override
+  String get pgtPosEnd => '在末尾';
+
+  @override
+  String pgtPosChapterEnd(String chapter) {
+    return '$chapter 末尾';
+  }
+
+  @override
+  String get pgtChapterMenuHead => '页面所在章节';
+
+  @override
+  String pgtTrayMoving(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页 · 移动中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtTrayCopied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已复制 $count 页',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtSavedShort => '已保存';
+
+  @override
+  String get pgtSavedLong => '已保存在此设备上，关闭应用后仍然保留。';
+
+  @override
+  String pgtFrom(String notebook) {
+    return '来自 $notebook';
+  }
+
+  @override
+  String pgtFromChapter(String notebook, String chapter) {
+    return '来自 $notebook › $chapter';
+  }
+
+  @override
+  String pgtFromSeveral(String notebook) {
+    return '来自 $notebook › 多个章节';
+  }
+
+  @override
+  String pgtSourceDeleted(String notebook) {
+    return '$notebook 已被删除，这些页面现在是副本';
+  }
+
+  @override
+  String get pgtTrayOptions => '页面托盘选项';
+
+  @override
+  String get pgtCancelMove => '取消移动';
+
+  @override
+  String get pgtCancelMoveHint => '页面从未被移除';
+
+  @override
+  String get pgtClearTray => '清空托盘';
+
+  @override
+  String get pgtChooseWhere => '在页面中选择位置';
+
+  @override
+  String get pgtChooseWhereHint => '打开此笔记本的页面，托盘已就绪';
+
+  @override
+  String pgtOpenSource(String notebook) {
+    return '打开 $notebook';
+  }
+
+  @override
+  String get pgtOpenSourceHint => '这些页面的来源';
+
+  @override
+  String get pgtUndo => '撤销';
+
+  @override
+  String get pgtShow => '查看';
+
+  @override
+  String pgtChooserTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '将 $_temp0移到…';
+  }
+
+  @override
+  String get pgtRecent => '最近';
+
+  @override
+  String get pgtChooserEmpty => '此设备上没有其他笔记本。';
+
+  @override
+  String get pgtBrowseLibrary => '浏览资料库';
+
+  @override
+  String pgtNbPages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtNbChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个章节',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtNbPagesChapters(String pages, String chapters) {
+    return '$pages · $chapters';
+  }
+
+  @override
+  String pgtLibHintMove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '选择一个笔记本来移入 $_temp0。点按封面，或使用它的 … 菜单。';
+  }
+
+  @override
+  String pgtLibHintPaste(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '选择一个笔记本来粘贴 $_temp0。点按封面，或使用它的 … 菜单。';
+  }
+
+  @override
+  String pgtBadgeMoving(int count) {
+    return '$count 页移动中';
+  }
+
+  @override
+  String pgtCardMoveHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '将 $_temp0移到此处';
+  }
+
+  @override
+  String pgtCardPasteHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页',
+    );
+    return '在此粘贴 $_temp0';
+  }
+
+  @override
+  String pgtCardEndOfChapter(String chapter) {
+    return '在 $chapter 末尾';
+  }
+
+  @override
+  String get pgtCardAtEnd => '在末尾';
+
+  @override
+  String get pgtWhereStart => '在开头';
+
+  @override
+  String pgtWhereAfter(int page) {
+    return '在第 $page 页之后';
+  }
+
+  @override
+  String get pgtWhereEnd => '在末尾';
+
+  @override
+  String pgtWhereChapterEnd(String chapter) {
+    return '在 $chapter 末尾';
+  }
+
+  @override
+  String pgtToastCopied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已复制 $count 页。打开任意笔记本即可粘贴。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastCopiedSkipped(int count, int skipped) {
+    return '已复制 $count 页；$skipped 页尚未加载，已跳过。';
+  }
+
+  @override
+  String pgtToastMoveReady(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 页已准备移动。确认之前不会有任何改动。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastMoveReadySkipped(int count, int skipped) {
+    return '$count 页已准备移动；$skipped 页尚未加载，已跳过。确认之前不会有任何改动。';
+  }
+
+  @override
+  String pgtToastMoveCancelled(int count, String notebook) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已取消移动。$count 页仍留在 $notebook。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastTrayCleared => '托盘已清空';
+
+  @override
+  String pgtToastPasted(int count, String notebook, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已将 $count 页粘贴到 $notebook，$where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastMoved(int count, String notebook, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已将 $count 页移到 $notebook，$where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastDuplicated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已复制 $count 页',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastUndone => '已撤销';
+
+  @override
+  String pgtToastTooMany(int max) {
+    return '托盘最多容纳 $max 页，请少选一些。';
+  }
+
+  @override
+  String get pgtToastNothing => '这些页面尚未就绪（仍在加载），请稍后再试。';
+
+  @override
+  String get pgtToastTrayNotSaved => '无法将托盘保存到此设备，关闭应用后将丢失。';
+
+  @override
+  String get pgtToastPagesGone => '这些页面已不在此笔记本中。';
+
+  @override
+  String get pgtToastTrayDamaged => '已保存的托盘不完整，未粘贴任何内容。';
+
+  @override
+  String get pgtToastDestFailed => '无法保存粘贴的页面，未做任何改动。';
+
+  @override
+  String get pgtToastDestUnavailable => '该笔记本目前无法编辑，未做任何改动。';
+
+  @override
+  String pgtToastSourceFailed(String notebook) {
+    return '页面已添加，但无法从 $notebook 中移除。两个笔记本里都有这些页面；托盘现在是副本。';
+  }
+
+  @override
+  String pgtToastMoveResumed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已完成之前中断的 $count 页移动。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastUndoFailed => '无法撤销，请检查两个笔记本。';
 }

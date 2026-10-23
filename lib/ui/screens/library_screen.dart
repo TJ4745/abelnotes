@@ -38,6 +38,8 @@ import 'package:abelnotes/shared/utils/text_fold.dart';
 import 'package:abelnotes/ui/services/file_export.dart';
 import 'package:abelnotes/ui/services/notebook_opener.dart';
 import 'package:abelnotes/ui/theme/hw_icons.dart';
+import 'package:abelnotes/features/pages_tray/application/pages_tray_provider.dart';
+import 'package:abelnotes/features/pages_tray/domain/pages_tray.dart';
 import 'package:abelnotes/ui/theme/hw_theme.dart';
 import 'package:abelnotes/ui/primitives/hw_button.dart';
 import 'package:abelnotes/ui/primitives/hw_glass.dart';
@@ -163,6 +165,27 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     _openNcnotePath(pending.path);
   }
 
+  /// Opens the notebook a tray action asked for (the editor takes it up from
+  /// there and shows its Pages). Ignored while the editor is on top: it
+  /// answers the request itself.
+  Future<void> _consumeTrayNav(TrayNavRequest req) async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    final list = ref.read(notebookListProvider).valueOrNull ?? const [];
+    final entry =
+        list.where((e) => e.metadata.id == req.notebookId).firstOrNull;
+    if (entry == null) {
+      ref.read(pagesTrayNavProvider.notifier).state = null;
+      return;
+    }
+    if (req.landing.isNotEmpty) {
+      ref.read(pagesTrayProvider.notifier).landPages(req.landing);
+    }
+    await _openNotebook(entry);
+    if (mounted && ref.read(pagesTrayNavProvider) == req) {
+      ref.read(pagesTrayNavProvider.notifier).state = null;
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -187,6 +210,11 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     ref.listen<PendingFileOpen?>(fileOpenReceiverProvider, (_, next) {
       if (next != null) _consumePendingFileOpen();
     });
+
+    ref.listen<TrayNavRequest?>(pagesTrayNavProvider, (_, next) {
+      if (next != null) _consumeTrayNav(next);
+    });
+    final tray = ref.watch(pagesTrayProvider.select((s) => s.tray));
 
     final entries = asyncList.valueOrNull ?? const <NotebookEntry>[];
     final filtered =
@@ -222,6 +250,10 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
                 hPad: wide ? 32 : 16,
               ),
             ),
+            if (tray != null)
+              SliverToBoxAdapter(
+                child: _TrayHint(tray: tray, hPad: wide ? 32 : 16),
+              ),
             if (!wide)
               SliverToBoxAdapter(
                 child: _FolderChipRow(
@@ -261,6 +293,8 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
               onCreateSketch: _createSketch,
               onLongPress: _showNotebookMenu,
               onToggleFavorite: _toggleFavorite,
+              movingFromId: tray != null && tray.isMove ? tray.sourceNotebookId : null,
+              movingCount: tray?.count ?? 0,
             ),
             loading: () => Padding(
               padding: const EdgeInsets.only(top: _TopBar.height),
@@ -1079,6 +1113,7 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     final l10n = AppLocalizations.of(context);
     final settings = ref.read(appSettingsProvider);
     final isFav = settings.favoriteNotebookIds.contains(entry.metadata.id);
+    final tray = ref.read(pagesTrayProvider).tray;
 
     final action = await showScrollableSheet<String>(
       context: context,
@@ -1112,6 +1147,14 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
                       fontWeight: FontWeight.w600,
                       fontSize: 16)),
               const SizedBox(height: 16),
+              if (tray != null && !(tray.isMove && tray.sourceNotebookId == entry.metadata.id))
+                _menuItem(
+                    ctx,
+                    tray.isMove ? 'move' : 'paste',
+                    tray.isMove
+                        ? l10n.pgtCardMoveHere(tray.count)
+                        : l10n.pgtCardPasteHere(tray.count),
+                    'trayPaste'),
               _menuItem(
                   ctx,
                   'star',
@@ -1152,6 +1195,11 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     if (!mounted) return;
     try {
       switch (action) {
+        case 'trayPaste':
+          await ref
+              .read(pagesTrayProvider.notifier)
+              .pasteIntoClosed(entry.metadata.id);
+          break;
         case 'fav':
           ref
               .read(appSettingsProvider.notifier)
@@ -2280,6 +2328,10 @@ class _Body extends StatelessWidget {
   final ValueChanged<NotebookEntry> onLongPress;
   final ValueChanged<NotebookEntry> onToggleFavorite;
 
+  /// Notebook a pending move comes from, tagged on its cover.
+  final String? movingFromId;
+  final int movingCount;
+
   const _Body({
     required this.controller,
     required this.headerSlivers,
@@ -2294,6 +2346,8 @@ class _Body extends StatelessWidget {
     required this.onCreateSketch,
     required this.onLongPress,
     required this.onToggleFavorite,
+    required this.movingFromId,
+    required this.movingCount,
   });
 
   @override
@@ -2400,13 +2454,22 @@ class _Body extends StatelessWidget {
                     (ctx, i) {
                       if (i == 0) return _NewTile(onTap: onCreate);
                       final e = entries[i - 1];
-                      return _CoverTile(
+                      final tile = _CoverTile(
                         entry: e,
                         favorite: favoriteIds.contains(e.metadata.id),
                         onTap: (r) => onOpen(e, origin: r),
                         onLongPress: () => onLongPress(e),
                         onToggleFavorite: () => onToggleFavorite(e),
                       );
+                      if (e.metadata.id != movingFromId) return tile;
+                      return Stack(clipBehavior: Clip.none, children: [
+                        tile,
+                        Positioned(
+                          left: -6,
+                          bottom: _CoverTile.textBlockHeightFor(ctx) + 56,
+                          child: _MovingBadge(count: movingCount),
+                        ),
+                      ]);
                     },
                     childCount: entries.length + 1,
                   ),
@@ -2427,7 +2490,7 @@ class _Body extends StatelessWidget {
               ),
             ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        SliverToBoxAdapter(child: SizedBox(height: movingCount > 0 ? 190 : 80)),
       ],
     );
   }
@@ -4005,6 +4068,68 @@ class _NameDialogState extends State<_NameDialog> {
             child: Text(l10n.libCancel)),
         FilledButton(onPressed: _submit, child: Text(widget.confirmLabel)),
       ],
+    );
+  }
+}
+
+/// "Choose a notebook": shown under the title while a tray is waiting.
+class _TrayHint extends StatelessWidget {
+  final PagesTray tray;
+  final double hPad;
+  const _TrayHint({required this.tray, required this.hPad});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = HwThemeScope.of(context);
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: HwIcon(tray.isMove ? 'move' : 'paste',
+              size: 16, color: p.accentDeep),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+              tray.isMove
+                  ? l.pgtLibHintMove(tray.count)
+                  : l.pgtLibHintPaste(tray.count),
+              style: TextStyle(fontSize: 13.5, height: 1.3, color: p.accentDeep)),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Tag on the cover of the notebook a pending move comes from.
+class _MovingBadge extends StatelessWidget {
+  final int count;
+  const _MovingBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = HwThemeScope.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(7, 4, 9, 4),
+      decoration: BoxDecoration(
+        color: p.paper0,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+              color: p.ink0.withValues(alpha: 0.22),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        HwIcon('move', size: 13, color: p.accent),
+        const SizedBox(width: 5),
+        Text(AppLocalizations.of(context).pgtBadgeMoving(count),
+            style: TextStyle(
+                fontSize: 11.5, fontWeight: FontWeight.w600, color: p.ink0)),
+      ]),
     );
   }
 }

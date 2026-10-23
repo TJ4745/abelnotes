@@ -48,6 +48,7 @@ import 'package:abelnotes/ui/services/file_export.dart';
 import 'package:abelnotes/features/canvas/presentation/canvas_painter_notifiers.dart';
 import 'package:abelnotes/features/canvas/presentation/canvas_crop_dialog.dart';
 import 'package:abelnotes/features/canvas/presentation/page_manager_sheet.dart';
+import 'package:abelnotes/features/pages_tray/application/pages_tray_provider.dart';
 import 'package:abelnotes/ui/editor/hw_editor_chrome.dart';
 import 'package:abelnotes/ui/primitives/hw_motion_widgets.dart';
 import 'package:abelnotes/ui/theme/hw_motion.dart';
@@ -969,8 +970,16 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // The ActiveStrokeNotifier is screen-local (it bypasses Riverpod for
     // perf), so the provider can't see pen-down state without this probe.
     // Cleared in dispose() before the notifier itself is disposed.
-    ref.read(canvasProvider.notifier).strokeActiveProbe =
-        () => _activeStrokeNotifier.isActive;
+    ref.read(canvasProvider.notifier).strokeActiveProbe = () => _activeStrokeNotifier.isActive;
+    // A tray action can ask for this notebook's Pages: the library set the
+    // request before opening us, or the tray pill sets it while we are open.
+    ref.listenManual<TrayNavRequest?>(pagesTrayNavProvider, (_, next) {
+      if (next != null) _onTrayNav(next);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final req = ref.read(pagesTrayNavProvider);
+      if (req != null && mounted) _onTrayNav(req);
+    });
   }
 
   /// Tool the editor arms when a notebook opens: the one the user last
@@ -8383,15 +8392,42 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      constraints: const BoxConstraints(maxWidth: 1000),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => PageManagerSheet(
         initialState: canvasState,
         parentMessenger: parentMessenger,
+        onGoTo: _goToNotebook,
       ),
     );
+  }
+
+  /// Leaves this notebook for [id] (null = the library) and, for a notebook,
+  /// has the library open it on its Pages.
+  Future<void> _goToNotebook(String? id) async {
+    final container = ProviderScope.containerOf(context);
+    final route = ModalRoute.of(context);
+    await _onWillPop();
+    // Still here: the user stayed (unsaved-changes dialog).
+    if (route == null || route.isActive || id == null) return;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    container.read(pagesTrayNavProvider.notifier).state = TrayNavRequest(id);
+  }
+
+  /// A tray action asked for this notebook's Pages, or for another notebook.
+  void _onTrayNav(TrayNavRequest req) {
+    final s = ref.read(canvasProvider);
+    if (s == null || !mounted) return;
+    ref.read(pagesTrayNavProvider.notifier).state = null;
+    if (req.notebookId == s.metadata.id) {
+      if (req.landing.isNotEmpty) {
+        ref.read(canvasProvider.notifier).setActiveChapter(null);
+        ref.read(pagesTrayProvider.notifier).landPages(req.landing);
+      }
+      _showPageManager(ref.read(canvasProvider) ?? s);
+    } else {
+      unawaited(_goToNotebook(req.notebookId));
+    }
   }
 
   /// Center of the visible viewport mapped to page coordinates.

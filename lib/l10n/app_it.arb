@@ -1681,7 +1681,7 @@
       }
     }
   },
-  "pmSelectedCount": "{count} selezionate",
+  "pmSelectedCount": "{count, plural, one{1 selezionata} other{{count} selezionate}}",
   "@pmSelectedCount": {
     "placeholders": {
       "count": {
@@ -2558,5 +2558,431 @@
   "qtResumeSyncNeedsOpen": "Il quaderno si sincronizza di nuovo. Aprilo per unire le modifiche fatte su un altro dispositivo.",
   "@qtResumeSyncNeedsOpen": {},
   "libImportSuccessMany": "{count, plural, one{Importato {count} quaderno} other{Importati {count} quaderni}}",
-  "@libImportSuccessMany": {"placeholders": {"count": {"type": "int"}}}
+  "@libImportSuccessMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtTitlePages": "Pagine",
+  "@pgtTitlePages": {},
+  "pgtEyebrow": "{notebook} · {count, plural, one{1 pagina} other{{count} pagine}}",
+  "@pgtEyebrow": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtSelect": "Seleziona",
+  "@pgtSelect": {},
+  "pgtSelectPages": "Seleziona pagine",
+  "@pgtSelectPages": {},
+  "pgtAll": "Tutte",
+  "@pgtAll": {},
+  "pgtNone": "Nessuna",
+  "@pgtNone": {},
+  "pgtDone": "Fine",
+  "@pgtDone": {},
+  "pgtNoChapter": "Nessun capitolo",
+  "@pgtNoChapter": {},
+  "pgtCopy": "Copia",
+  "@pgtCopy": {},
+  "pgtMove": "Sposta",
+  "@pgtMove": {},
+  "pgtTagMoving": "in spostamento",
+  "@pgtTagMoving": {},
+  "pgtHintPlaceMove": "Tocca una pagina per metterle dopo di essa, o il suo bordo sinistro per metterle prima. Non cambia nulla finché non confermi.",
+  "@pgtHintPlaceMove": {},
+  "pgtHintPlaceCopy": "Tocca una pagina per incollare dopo di essa, o il suo bordo sinistro per incollare prima.",
+  "@pgtHintPlaceCopy": {},
+  "pgtMoveHere": "Sposta qui",
+  "@pgtMoveHere": {},
+  "pgtPasteHere": "Incolla qui",
+  "@pgtPasteHere": {},
+  "pgtMoveShort": "Sposta",
+  "@pgtMoveShort": {},
+  "pgtPasteShort": "Incolla",
+  "@pgtPasteShort": {},
+  "pgtPasteCount": "Incolla {count, plural, one{1 pagina} other{{count} pagine}}",
+  "@pgtPasteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtPasteCountShort": "Incolla {count}",
+  "@pgtPasteCountShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtThisNotebook": "Questo taccuino",
+  "@pgtThisNotebook": {},
+  "pgtAnotherNotebook": "Altro taccuino…",
+  "@pgtAnotherNotebook": {},
+  "pgtMoveToNb": "Sposta in {notebook}",
+  "@pgtMoveToNb": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtPasteIntoNb": "Incolla in {notebook}",
+  "@pgtPasteIntoNb": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtPosStart": "All'inizio",
+  "@pgtPosStart": {},
+  "pgtPosAfter": "Dopo la pagina {page}",
+  "@pgtPosAfter": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtPosEnd": "In fondo",
+  "@pgtPosEnd": {},
+  "pgtPosChapterEnd": "Fine di {chapter}",
+  "@pgtPosChapterEnd": {
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtChapterMenuHead": "Capitolo per le pagine",
+  "@pgtChapterMenuHead": {},
+  "pgtTrayMoving": "{count, plural, one{1 pagina · in spostamento} other{{count} pagine · in spostamento}}",
+  "@pgtTrayMoving": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtTrayCopied": "{count, plural, one{1 pagina · copiata} other{{count} pagine · copiate}}",
+  "@pgtTrayCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtSavedShort": "Salvato",
+  "@pgtSavedShort": {},
+  "pgtSavedLong": "Salvato su questo dispositivo. Resta anche dopo la chiusura dell'app.",
+  "@pgtSavedLong": {},
+  "pgtFrom": "da {notebook}",
+  "@pgtFrom": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtFromChapter": "da {notebook} › {chapter}",
+  "@pgtFromChapter": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      },
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtFromSeveral": "da {notebook} › più capitoli",
+  "@pgtFromSeveral": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtSourceDeleted": "{notebook} è stato eliminato, queste pagine ora sono una copia",
+  "@pgtSourceDeleted": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtTrayOptions": "Opzioni degli appunti",
+  "@pgtTrayOptions": {},
+  "pgtCancelMove": "Annulla spostamento",
+  "@pgtCancelMove": {},
+  "pgtCancelMoveHint": "Le pagine non sono mai state rimosse",
+  "@pgtCancelMoveHint": {},
+  "pgtClearTray": "Svuota gli appunti",
+  "@pgtClearTray": {},
+  "pgtChooseWhere": "Scegli dove, in Pagine",
+  "@pgtChooseWhere": {},
+  "pgtChooseWhereHint": "Apre le pagine di questo taccuino, pronte per incollare gli appunti",
+  "@pgtChooseWhereHint": {},
+  "pgtOpenSource": "Apri {notebook}",
+  "@pgtOpenSource": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtOpenSourceHint": "Da dove vengono queste pagine",
+  "@pgtOpenSourceHint": {},
+  "pgtUndo": "Annulla",
+  "@pgtUndo": {},
+  "pgtShow": "Mostra",
+  "@pgtShow": {},
+  "pgtChooserTitle": "Sposta {count, plural, one{1 pagina} other{{count} pagine}} in…",
+  "@pgtChooserTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtRecent": "Recenti",
+  "@pgtRecent": {},
+  "pgtChooserEmpty": "Non ci sono altri taccuini su questo dispositivo.",
+  "@pgtChooserEmpty": {},
+  "pgtBrowseLibrary": "Sfoglia la libreria",
+  "@pgtBrowseLibrary": {},
+  "pgtNbPages": "{count, plural, one{1 pagina} other{{count} pagine}}",
+  "@pgtNbPages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtNbChapters": "{count, plural, one{1 capitolo} other{{count} capitoli}}",
+  "@pgtNbChapters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtNbPagesChapters": "{pages} · {chapters}",
+  "@pgtNbPagesChapters": {
+    "placeholders": {
+      "pages": {
+        "type": "String"
+      },
+      "chapters": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtLibHintMove": "Scegli un taccuino in cui spostare {count, plural, one{1 pagina} other{{count} pagine}}. Tocca una copertina o usa il suo menu …",
+  "@pgtLibHintMove": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtLibHintPaste": "Scegli un taccuino in cui incollare {count, plural, one{1 pagina} other{{count} pagine}}. Tocca una copertina o usa il suo menu …",
+  "@pgtLibHintPaste": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtBadgeMoving": "{count} in spostamento",
+  "@pgtBadgeMoving": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtCardMoveHere": "Sposta qui {count, plural, one{1 pagina} other{{count} pagine}}",
+  "@pgtCardMoveHere": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtCardPasteHere": "Incolla qui {count, plural, one{1 pagina} other{{count} pagine}}",
+  "@pgtCardPasteHere": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtCardEndOfChapter": "In fondo a {chapter}",
+  "@pgtCardEndOfChapter": {
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtCardAtEnd": "In fondo",
+  "@pgtCardAtEnd": {},
+  "pgtWhereStart": "all'inizio",
+  "@pgtWhereStart": {},
+  "pgtWhereAfter": "dopo la pagina {page}",
+  "@pgtWhereAfter": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtWhereEnd": "in fondo",
+  "@pgtWhereEnd": {},
+  "pgtWhereChapterEnd": "in fondo a {chapter}",
+  "@pgtWhereChapterEnd": {
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtToastCopied": "{count, plural, one{Copiata 1 pagina. Apri un taccuino per incollare.} other{Copiate {count} pagine. Apri un taccuino per incollare.}}",
+  "@pgtToastCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastCopiedSkipped": "Copiate {count} pagine; {skipped} non ancora caricate sono state saltate.",
+  "@pgtToastCopiedSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastMoveReady": "{count, plural, one{1 pagina pronta da spostare. Non cambia nulla finché non confermi.} other{{count} pagine pronte da spostare. Non cambia nulla finché non confermi.}}",
+  "@pgtToastMoveReady": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastMoveReadySkipped": "{count} pagine pronte da spostare; {skipped} non ancora caricate sono state saltate. Non cambia nulla finché non confermi.",
+  "@pgtToastMoveReadySkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastMoveCancelled": "{count, plural, one{Spostamento annullato. 1 pagina resta in {notebook}.} other{Spostamento annullato. {count} pagine restano in {notebook}.}}",
+  "@pgtToastMoveCancelled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtToastTrayCleared": "Appunti svuotati",
+  "@pgtToastTrayCleared": {},
+  "pgtToastPasted": "{count, plural, one{Incollata 1 pagina in {notebook}, {where}} other{Incollate {count} pagine in {notebook}, {where}}}",
+  "@pgtToastPasted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "notebook": {
+        "type": "String"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtToastMoved": "{count, plural, one{Spostata 1 pagina in {notebook}, {where}} other{Spostate {count} pagine in {notebook}, {where}}}",
+  "@pgtToastMoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "notebook": {
+        "type": "String"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtToastDuplicated": "{count, plural, one{Duplicata 1 pagina} other{Duplicate {count} pagine}}",
+  "@pgtToastDuplicated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastUndone": "Annullato",
+  "@pgtToastUndone": {},
+  "pgtToastTooMany": "Negli appunti ci stanno al massimo {max} pagine. Selezionane di meno.",
+  "@pgtToastTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastNothing": "Queste pagine non sono ancora pronte (in caricamento). Riprova tra un momento.",
+  "@pgtToastNothing": {},
+  "pgtToastTrayNotSaved": "Impossibile salvare gli appunti su questo dispositivo. Andranno persi alla chiusura dell'app.",
+  "@pgtToastTrayNotSaved": {},
+  "pgtToastPagesGone": "Queste pagine non sono più in questo taccuino.",
+  "@pgtToastPagesGone": {},
+  "pgtToastTrayDamaged": "Gli appunti salvati sono incompleti, non è stato incollato nulla.",
+  "@pgtToastTrayDamaged": {},
+  "pgtToastDestFailed": "Impossibile salvare le pagine incollate. Non è cambiato nulla.",
+  "@pgtToastDestFailed": {},
+  "pgtToastDestUnavailable": "Questo taccuino non si può modificare ora. Non è cambiato nulla.",
+  "@pgtToastDestUnavailable": {},
+  "pgtToastSourceFailed": "Le pagine sono state aggiunte, ma non si sono potute rimuovere da {notebook}. Ora sono in entrambi i taccuini; le pagine negli appunti sono diventate una copia.",
+  "@pgtToastSourceFailed": {
+    "placeholders": {
+      "notebook": {
+        "type": "String"
+      }
+    }
+  },
+  "pgtToastMoveResumed": "{count, plural, one{Completato lo spostamento di 1 pagina rimasto a metà.} other{Completato lo spostamento di {count} pagine rimasto a metà.}}",
+  "@pgtToastMoveResumed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pgtToastUndoFailed": "Impossibile annullare. Controlla i due taccuini.",
+  "@pgtToastUndoFailed": {}
 }

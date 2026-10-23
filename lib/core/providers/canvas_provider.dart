@@ -31,6 +31,8 @@ import 'package:abelnotes/features/canvas/data/render_engine.dart'
         shapeEllipseRect,
         triangleCorners;
 import 'package:abelnotes/features/canvas/data/math_rasterizer.dart';
+import 'package:abelnotes/features/pages_tray/domain/page_transfer.dart';
+import 'package:abelnotes/features/pages_tray/domain/pages_tray.dart' show TrayPage;
 import 'package:abelnotes/features/canvas/data/shape_recognizer.dart';
 import 'package:abelnotes/shared/models/ncnote_format.dart';
 import 'package:abelnotes/shared/utils/rich_paste.dart';
@@ -184,6 +186,10 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   /// so save() returns quickly; closeNotebook awaits this so the ZIP lands
   /// on disk before the notebook is torn down.
   Future<bool>? _pendingLocalSave;
+
+  /// The latest local save, kept after it settles so [saveLocally] can wait
+  /// for the one its own save() started.
+  Future<bool>? _lastLocalSave;
 
   /// Acquire exclusive sync lock. Returns when lock available.
   /// Returns false if notifier was disposed while waiting.
@@ -2003,6 +2009,31 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
         c.copyWith(pageIds: byChapter[c.id] ?? const <String>[]),
     ];
   }
+
+  @visibleForTesting
+  static List<Chapter> chaptersWithMembershipForTest(
+          List<Chapter> chapters, DocumentStructure doc) =>
+      _chaptersWithMembership(chapters, doc);
+
+  @visibleForTesting
+  static ({NotebookMetadata metadata, DocumentStructure document})
+      merge3WayForTest({
+    required NotebookMetadata? baseMeta,
+    required NotebookMetadata localMeta,
+    required NotebookMetadata remoteMeta,
+    required DocumentStructure? baseDoc,
+    required DocumentStructure localDoc,
+    required DocumentStructure remoteDoc,
+    required Set<String> survivingFileNames,
+  }) =>
+          _merge3Way(
+              baseMeta: baseMeta,
+              localMeta: localMeta,
+              remoteMeta: remoteMeta,
+              baseDoc: baseDoc,
+              localDoc: localDoc,
+              remoteDoc: remoteDoc,
+              survivingFileNames: survivingFileNames);
 
   /// Build a `pageId → chapterId` map from the canonical chapter list in
   /// metadata.  This is what lets the heal pass restore the user's
@@ -4924,25 +4955,21 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     );
   }
 
-  /// Paste pages from [PageClipboard] into this notebook at [insertDocIndex].
-  ///
-  /// Each page gets a fresh [pageId] and [fileName] so it doesn't collide with
-  /// any existing page.  The [chapterId] from the clipboard entry is preserved
-  /// unless the target notebook has no chapters, in which case it is cleared.
-  void pastePages({
+  /// Pastes [pages] into this notebook at [slot] (default: end of the last
+  /// chapter) and returns the new page ids. Fresh ids and file names; the
+  /// chapter is the slot's, never invented. [assets] are materialized here so
+  /// the pasted pages do not point at ids that exist only in the source.
+  List<String> pastePages({
     required List<PageData> pages,
     required List<PageEntry> entries,
     Map<String, Uint8List> assets = const {},
-    int? insertDocIndex, // null → append at end
+    PasteSlot? slot,
+    List<String>? pageIds,
   }) {
-    if (state == null) return;
+    if (state == null) return const [];
     final s = state!;
-    if (pages.isEmpty) return;
+    if (pages.isEmpty) return const [];
 
-    // Materialize clipboard-carried assets this notebook doesn't have
-    // (cross-notebook paste). Without the bytes, the pasted pages'
-    // image/PDF elements would reference asset ids that exist only in
-    // the SOURCE notebook — a permanently broken reference.
     var newAssetBytes = s.assetBytes;
     if (assets.isNotEmpty) {
       final merged = Map<String, Uint8List>.from(s.assetBytes);
@@ -4958,61 +4985,70 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       if (changed) newAssetBytes = merged;
     }
 
-    const uuid = Uuid();
     final now = DateTime.now();
-    final existingChapterIds = s.metadata.chapters.map((c) => c.id).toSet();
-
-    final insertIdx = (insertDocIndex ?? s.document.pages.length)
-        .clamp(0, s.document.pages.length);
-
-    final newEntries = <PageEntry>[];
-    final newPagesMap = Map<String, PageData>.from(s.pages);
-
-    for (int i = 0; i < pages.length; i++) {
-      final pageId = uuid.v4();
-      final fileName = _nextPageFileName(
-        s.copyWith(
-          document: s.document.copyWith(
-            pages: [
-              ...s.document.pages,
-              ...newEntries,
-            ],
-          ),
-        ),
-      );
-      // Only keep chapter id if the chapter still exists in this notebook
-      final chapterId = existingChapterIds.contains(entries[i].chapterId)
-          ? entries[i].chapterId
-          : null;
-      final newEntry = PageEntry(
-        pageId: pageId,
-        pageNumber: 0, // renumbered below
-        fileName: fileName,
-        lastModified: now,
-        chapterId: chapterId,
-      );
-      newEntries.add(newEntry);
-      newPagesMap[fileName] = pages[i].copyWith(pageId: pageId, modifiedAt: now);
-    }
-
-    final allEntries = List<PageEntry>.from(s.document.pages)
-      ..insertAll(insertIdx, newEntries);
-    // Renumber
-    for (int i = 0; i < allEntries.length; i++) {
-      allEntries[i] = allEntries[i].copyWith(pageNumber: i + 1);
-    }
-
-    final updatedDoc = s.document.copyWith(pages: allEntries);
-
+    final plan = planInsert(
+      document: s.document,
+      chapters: s.metadata.chapters,
+      pages: [
+        for (var i = 0; i < pages.length; i++) TrayPage(entries[i], pages[i]),
+      ],
+      slot: slot ?? appendSlot(s.metadata.chapters, s.document),
+      now: now,
+      pageIds: pageIds,
+    );
     state = s.copyWith(
-      document: updatedDoc,
-      pages: newPagesMap,
+      document: plan.document,
+      pages: {...s.pages, ...plan.newPages},
       assetBytes: newAssetBytes,
-      currentPageIndex: insertIdx,
+      currentPageIndex: plan.insertIndex,
       metadata: s.metadata.copyWith(
-        pageCount: allEntries.length,
+        pageCount: plan.document.pages.length,
         modifiedAt: now,
       ),
+      isDirty: true,
+    );
+    return plan.newPageIds;
+  }
+
+  /// Deletes the pages with these ids (those not here are ignored).
+  void deletePagesById(Set<String> pageIds) {
+    final s = state;
+    if (s == null) return;
+    deletePages([
+      for (var i = 0; i < s.document.pages.length; i++)
+        if (pageIds.contains(s.document.pages[i].pageId)) i,
+    ]);
+  }
+
+  /// Moves pages inside this notebook to [slot] (see [planMoveWithin]); the
+  /// editor stays on the page it was showing.
+  void movePagesToSlot(Set<String> pageIds, PasteSlot slot) {
+    final s = state;
+    if (s == null) return;
+    final doc = planMoveWithin(
+        document: s.document,
+        chapters: s.metadata.chapters,
+        pageIds: pageIds,
+        slot: slot);
+    _applyStructure(s, doc);
+  }
+
+  /// Page order and chapters back to [before] (Undo of [movePagesToSlot]).
+  void restorePageOrder(List<PageEntry> before) {
+    final s = state;
+    if (s == null) return;
+    _applyStructure(s, restoreOrder(s.document, before));
+  }
+
+  void _applyStructure(CanvasState s, DocumentStructure doc) {
+    final cur = s.currentPageIndex < s.document.pages.length
+        ? s.document.pages[s.currentPageIndex].pageId
+        : null;
+    final idx = doc.pages.indexWhere((e) => e.pageId == cur);
+    state = s.copyWith(
+      document: doc,
+      currentPageIndex: idx >= 0 ? idx : s.currentPageIndex,
+      metadata: s.metadata.copyWith(modifiedAt: DateTime.now()),
       isDirty: true,
     );
   }
@@ -8284,6 +8320,17 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     );
   }
 
+  /// Saves and returns true only once this save is on disk in the loose
+  /// store; false if nothing was written (guards) or the write failed.
+  Future<bool> saveLocally() async {
+    if (state == null) return false;
+    final before = _lastLocalSave;
+    await save();
+    final f = _lastLocalSave;
+    if (f == null || identical(f, before)) return false;
+    return f;
+  }
+
   Future<void> save() async {
     if (state == null) return;
     // Run even when not dirty if a delete queue is pending: a delete-only
@@ -8597,6 +8644,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       }
     })();
     _pendingLocalSave = localSaveFuture;
+    _lastLocalSave = localSaveFuture;
     unawaited(localSaveFuture.whenComplete(() {
       if (identical(_pendingLocalSave, localSaveFuture)) {
         _pendingLocalSave = null;

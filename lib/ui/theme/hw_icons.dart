@@ -366,6 +366,30 @@ class _HwIconPainter extends CustomPainter {
         p('M3 10h12');
         p('M11 6l4 4-4 4');
         break;
+      case 'move':
+        p('M3.5 4v12');
+        p('M7.5 10h10');
+        p('M13.5 6l4 4-4 4');
+        break;
+      case 'pin':
+        p('M10 17.5s6-5 6-9.2a6 6 0 1 0-12 0c0 4.2 6 9.2 6 9.2z');
+        circle(10, 8.3, 2);
+        break;
+      case 'saved':
+        circle(10, 10, 7.5);
+        p('M6.7 10.4l2.2 2.2 4.4-4.2');
+        break;
+      case 'paste':
+        canvas.drawRRect(
+            RRect.fromLTRBR(4.2, 4.2, 15.8, 17.5, const Radius.circular(2)),
+            stroke);
+        p('M7.5 4.2v-.7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v.7');
+        p('M7.5 10.8l1.8 1.8 3.5-3.6');
+        break;
+      case 'book':
+        p('M4.2 3.8A1.2 1.2 0 0 1 5.4 2.5H16v12.5H5.4a1.2 1.2 0 0 0-1.2 1.2z');
+        p('M4.2 16.2a1.2 1.2 0 0 0 1.2 1.3H16V15');
+        break;
       case 'drag':
         circle(7, 5, 0.9, filled: true);
         circle(13, 5, 0.9, filled: true);

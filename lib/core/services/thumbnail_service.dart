@@ -73,6 +73,28 @@ class ThumbnailService {
     Map<String, Uint8List> assetBytes = const {},
   }) async {
     if (!_initialized) await init();
+    final png = await renderPng(page,
+        imageCache: imageCache, assetBytes: assetBytes);
+    if (png == null) return null;
+    try {
+      final file = File(thumbnailPath(notebookId));
+      await file.writeAsBytes(png, flush: true);
+      return file.path;
+    } catch (e) {
+      debugPrint('[ThumbnailService] Write failed for $notebookId: $e');
+      return null;
+    }
+  }
+
+  /// Renders [page] to PNG bytes at [width] x [height] pixels, or null on
+  /// failure. Image elements fall back to decoding [assetBytes].
+  Future<Uint8List?> renderPng(
+    PageData page, {
+    Map<String, ui.Image> imageCache = const {},
+    Map<String, Uint8List> assetBytes = const {},
+    int width = thumbWidth,
+    int height = thumbHeight,
+  }) async {
     try {
       // ── Collect asset paths referenced by the page's image elements ──
       final neededAssets = <String>{};
@@ -106,7 +128,7 @@ class ThumbnailService {
       }
 
       final recorder = ui.PictureRecorder();
-      final size = Size(thumbWidth.toDouble(), thumbHeight.toDouble());
+      final size = Size(width.toDouble(), height.toDouble());
       final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size.width, size.height));
 
       // Clear to white — thumbnails never show app chrome behind.
@@ -121,7 +143,7 @@ class ThumbnailService {
       ).paint(canvas, size);
 
       final picture = recorder.endRecording();
-      final img = await picture.toImage(thumbWidth, thumbHeight);
+      final img = await picture.toImage(width, height);
       final data = await img.toByteData(format: ui.ImageByteFormat.png);
       picture.dispose();
       img.dispose();
@@ -131,13 +153,9 @@ class ThumbnailService {
           combinedCache[ref]!.dispose();
         }
       }
-      if (data == null) return null;
-
-      final file = File(thumbnailPath(notebookId));
-      await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
-      return file.path;
+      return data?.buffer.asUint8List();
     } catch (e) {
-      debugPrint('[ThumbnailService] Render failed for $notebookId: $e');
+      debugPrint('[ThumbnailService] Render failed: $e');
       return null;
     }
   }

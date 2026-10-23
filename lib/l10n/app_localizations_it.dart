@@ -2079,7 +2079,13 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String pmSelectedCount(int count) {
-    return '$count selezionate';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selezionate',
+      one: '1 selezionata',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3103,4 +3109,451 @@ class AppLocalizationsIt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get pgtTitlePages => 'Pagine';
+
+  @override
+  String pgtEyebrow(String notebook, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return '$notebook · $_temp0';
+  }
+
+  @override
+  String get pgtSelect => 'Seleziona';
+
+  @override
+  String get pgtSelectPages => 'Seleziona pagine';
+
+  @override
+  String get pgtAll => 'Tutte';
+
+  @override
+  String get pgtNone => 'Nessuna';
+
+  @override
+  String get pgtDone => 'Fine';
+
+  @override
+  String get pgtNoChapter => 'Nessun capitolo';
+
+  @override
+  String get pgtCopy => 'Copia';
+
+  @override
+  String get pgtMove => 'Sposta';
+
+  @override
+  String get pgtTagMoving => 'in spostamento';
+
+  @override
+  String get pgtHintPlaceMove =>
+      'Tocca una pagina per metterle dopo di essa, o il suo bordo sinistro per metterle prima. Non cambia nulla finché non confermi.';
+
+  @override
+  String get pgtHintPlaceCopy =>
+      'Tocca una pagina per incollare dopo di essa, o il suo bordo sinistro per incollare prima.';
+
+  @override
+  String get pgtMoveHere => 'Sposta qui';
+
+  @override
+  String get pgtPasteHere => 'Incolla qui';
+
+  @override
+  String get pgtMoveShort => 'Sposta';
+
+  @override
+  String get pgtPasteShort => 'Incolla';
+
+  @override
+  String pgtPasteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return 'Incolla $_temp0';
+  }
+
+  @override
+  String pgtPasteCountShort(int count) {
+    return 'Incolla $count';
+  }
+
+  @override
+  String get pgtThisNotebook => 'Questo taccuino';
+
+  @override
+  String get pgtAnotherNotebook => 'Altro taccuino…';
+
+  @override
+  String pgtMoveToNb(String notebook) {
+    return 'Sposta in $notebook';
+  }
+
+  @override
+  String pgtPasteIntoNb(String notebook) {
+    return 'Incolla in $notebook';
+  }
+
+  @override
+  String get pgtPosStart => 'All\'inizio';
+
+  @override
+  String pgtPosAfter(int page) {
+    return 'Dopo la pagina $page';
+  }
+
+  @override
+  String get pgtPosEnd => 'In fondo';
+
+  @override
+  String pgtPosChapterEnd(String chapter) {
+    return 'Fine di $chapter';
+  }
+
+  @override
+  String get pgtChapterMenuHead => 'Capitolo per le pagine';
+
+  @override
+  String pgtTrayMoving(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine · in spostamento',
+      one: '1 pagina · in spostamento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtTrayCopied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine · copiate',
+      one: '1 pagina · copiata',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtSavedShort => 'Salvato';
+
+  @override
+  String get pgtSavedLong =>
+      'Salvato su questo dispositivo. Resta anche dopo la chiusura dell\'app.';
+
+  @override
+  String pgtFrom(String notebook) {
+    return 'da $notebook';
+  }
+
+  @override
+  String pgtFromChapter(String notebook, String chapter) {
+    return 'da $notebook › $chapter';
+  }
+
+  @override
+  String pgtFromSeveral(String notebook) {
+    return 'da $notebook › più capitoli';
+  }
+
+  @override
+  String pgtSourceDeleted(String notebook) {
+    return '$notebook è stato eliminato, queste pagine ora sono una copia';
+  }
+
+  @override
+  String get pgtTrayOptions => 'Opzioni degli appunti';
+
+  @override
+  String get pgtCancelMove => 'Annulla spostamento';
+
+  @override
+  String get pgtCancelMoveHint => 'Le pagine non sono mai state rimosse';
+
+  @override
+  String get pgtClearTray => 'Svuota gli appunti';
+
+  @override
+  String get pgtChooseWhere => 'Scegli dove, in Pagine';
+
+  @override
+  String get pgtChooseWhereHint =>
+      'Apre le pagine di questo taccuino, pronte per incollare gli appunti';
+
+  @override
+  String pgtOpenSource(String notebook) {
+    return 'Apri $notebook';
+  }
+
+  @override
+  String get pgtOpenSourceHint => 'Da dove vengono queste pagine';
+
+  @override
+  String get pgtUndo => 'Annulla';
+
+  @override
+  String get pgtShow => 'Mostra';
+
+  @override
+  String pgtChooserTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return 'Sposta $_temp0 in…';
+  }
+
+  @override
+  String get pgtRecent => 'Recenti';
+
+  @override
+  String get pgtChooserEmpty =>
+      'Non ci sono altri taccuini su questo dispositivo.';
+
+  @override
+  String get pgtBrowseLibrary => 'Sfoglia la libreria';
+
+  @override
+  String pgtNbPages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtNbChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capitoli',
+      one: '1 capitolo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtNbPagesChapters(String pages, String chapters) {
+    return '$pages · $chapters';
+  }
+
+  @override
+  String pgtLibHintMove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return 'Scegli un taccuino in cui spostare $_temp0. Tocca una copertina o usa il suo menu …';
+  }
+
+  @override
+  String pgtLibHintPaste(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return 'Scegli un taccuino in cui incollare $_temp0. Tocca una copertina o usa il suo menu …';
+  }
+
+  @override
+  String pgtBadgeMoving(int count) {
+    return '$count in spostamento';
+  }
+
+  @override
+  String pgtCardMoveHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return 'Sposta qui $_temp0';
+  }
+
+  @override
+  String pgtCardPasteHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pagine',
+      one: '1 pagina',
+    );
+    return 'Incolla qui $_temp0';
+  }
+
+  @override
+  String pgtCardEndOfChapter(String chapter) {
+    return 'In fondo a $chapter';
+  }
+
+  @override
+  String get pgtCardAtEnd => 'In fondo';
+
+  @override
+  String get pgtWhereStart => 'all\'inizio';
+
+  @override
+  String pgtWhereAfter(int page) {
+    return 'dopo la pagina $page';
+  }
+
+  @override
+  String get pgtWhereEnd => 'in fondo';
+
+  @override
+  String pgtWhereChapterEnd(String chapter) {
+    return 'in fondo a $chapter';
+  }
+
+  @override
+  String pgtToastCopied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Copiate $count pagine. Apri un taccuino per incollare.',
+      one: 'Copiata 1 pagina. Apri un taccuino per incollare.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastCopiedSkipped(int count, int skipped) {
+    return 'Copiate $count pagine; $skipped non ancora caricate sono state saltate.';
+  }
+
+  @override
+  String pgtToastMoveReady(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count pagine pronte da spostare. Non cambia nulla finché non confermi.',
+      one: '1 pagina pronta da spostare. Non cambia nulla finché non confermi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastMoveReadySkipped(int count, int skipped) {
+    return '$count pagine pronte da spostare; $skipped non ancora caricate sono state saltate. Non cambia nulla finché non confermi.';
+  }
+
+  @override
+  String pgtToastMoveCancelled(int count, String notebook) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Spostamento annullato. $count pagine restano in $notebook.',
+      one: 'Spostamento annullato. 1 pagina resta in $notebook.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastTrayCleared => 'Appunti svuotati';
+
+  @override
+  String pgtToastPasted(int count, String notebook, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Incollate $count pagine in $notebook, $where',
+      one: 'Incollata 1 pagina in $notebook, $where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastMoved(int count, String notebook, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Spostate $count pagine in $notebook, $where',
+      one: 'Spostata 1 pagina in $notebook, $where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastDuplicated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Duplicate $count pagine',
+      one: 'Duplicata 1 pagina',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastUndone => 'Annullato';
+
+  @override
+  String pgtToastTooMany(int max) {
+    return 'Negli appunti ci stanno al massimo $max pagine. Selezionane di meno.';
+  }
+
+  @override
+  String get pgtToastNothing =>
+      'Queste pagine non sono ancora pronte (in caricamento). Riprova tra un momento.';
+
+  @override
+  String get pgtToastTrayNotSaved =>
+      'Impossibile salvare gli appunti su questo dispositivo. Andranno persi alla chiusura dell\'app.';
+
+  @override
+  String get pgtToastPagesGone =>
+      'Queste pagine non sono più in questo taccuino.';
+
+  @override
+  String get pgtToastTrayDamaged =>
+      'Gli appunti salvati sono incompleti, non è stato incollato nulla.';
+
+  @override
+  String get pgtToastDestFailed =>
+      'Impossibile salvare le pagine incollate. Non è cambiato nulla.';
+
+  @override
+  String get pgtToastDestUnavailable =>
+      'Questo taccuino non si può modificare ora. Non è cambiato nulla.';
+
+  @override
+  String pgtToastSourceFailed(String notebook) {
+    return 'Le pagine sono state aggiunte, ma non si sono potute rimuovere da $notebook. Ora sono in entrambi i taccuini; le pagine negli appunti sono diventate una copia.';
+  }
+
+  @override
+  String pgtToastMoveResumed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Completato lo spostamento di $count pagine rimasto a metà.',
+      one: 'Completato lo spostamento di 1 pagina rimasto a metà.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastUndoFailed =>
+      'Impossibile annullare. Controlla i due taccuini.';
 }

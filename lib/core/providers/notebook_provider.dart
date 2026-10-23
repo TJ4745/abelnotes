@@ -18,6 +18,7 @@ import 'package:abelnotes/core/services/pending_root_uploads.dart';
 import 'package:abelnotes/core/services/search_service.dart';
 import 'package:abelnotes/core/services/sync_service.dart';
 import 'package:abelnotes/core/services/unpushed_guard.dart';
+import 'package:abelnotes/features/pages_tray/application/pages_tray_provider.dart';
 import 'package:abelnotes/core/services/remote_store.dart';
 
 import 'package:abelnotes/shared/models/ncnote_format.dart';
@@ -260,6 +261,9 @@ class NotebookListNotifier
       e is TimeoutException ||
       e is HandshakeException ||
       e is http.ClientException;
+
+  /// Re-reads the cards from the local database, without touching the server.
+  Future<void> reloadFromLocal() => _loadFromLocalDb(_ref.read(fileServiceProvider));
 
   /// Build notebook entries directly from local SQLite metadata (no ZIP parsing).
   Future<void> _loadFromLocalDb(FileService fileService) async {
@@ -1286,6 +1290,8 @@ class NotebookListNotifier
     state = AsyncValue.data(
       current.where((e) => e.metadata.id != entry.metadata.id).toList(),
     );
+    unawaited(
+        _ref.read(pagesTrayProvider.notifier).onNotebookDeleted(entry.metadata.id));
     return (trashId: trashId, remotePending: remotePending);
   }
 

@@ -3459,7 +3459,7 @@ abstract class AppLocalizations {
   /// No description provided for @pmSelectedCount.
   ///
   /// In it, this message translates to:
-  /// **'{count} selezionate'**
+  /// **'{count, plural, one{1 selezionata} other{{count} selezionate}}'**
   String pmSelectedCount(int count);
 
   /// No description provided for @pmSelectAllButton.
@@ -4997,6 +4997,510 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'{count, plural, one{Importato {count} quaderno} other{Importati {count} quaderni}}'**
   String libImportSuccessMany(int count);
+
+  /// No description provided for @pgtTitlePages.
+  ///
+  /// In it, this message translates to:
+  /// **'Pagine'**
+  String get pgtTitlePages;
+
+  /// No description provided for @pgtEyebrow.
+  ///
+  /// In it, this message translates to:
+  /// **'{notebook} · {count, plural, one{1 pagina} other{{count} pagine}}'**
+  String pgtEyebrow(String notebook, int count);
+
+  /// No description provided for @pgtSelect.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona'**
+  String get pgtSelect;
+
+  /// No description provided for @pgtSelectPages.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona pagine'**
+  String get pgtSelectPages;
+
+  /// No description provided for @pgtAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutte'**
+  String get pgtAll;
+
+  /// No description provided for @pgtNone.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna'**
+  String get pgtNone;
+
+  /// No description provided for @pgtDone.
+  ///
+  /// In it, this message translates to:
+  /// **'Fine'**
+  String get pgtDone;
+
+  /// No description provided for @pgtNoChapter.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun capitolo'**
+  String get pgtNoChapter;
+
+  /// No description provided for @pgtCopy.
+  ///
+  /// In it, this message translates to:
+  /// **'Copia'**
+  String get pgtCopy;
+
+  /// No description provided for @pgtMove.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta'**
+  String get pgtMove;
+
+  /// No description provided for @pgtTagMoving.
+  ///
+  /// In it, this message translates to:
+  /// **'in spostamento'**
+  String get pgtTagMoving;
+
+  /// No description provided for @pgtHintPlaceMove.
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca una pagina per metterle dopo di essa, o il suo bordo sinistro per metterle prima. Non cambia nulla finché non confermi.'**
+  String get pgtHintPlaceMove;
+
+  /// No description provided for @pgtHintPlaceCopy.
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca una pagina per incollare dopo di essa, o il suo bordo sinistro per incollare prima.'**
+  String get pgtHintPlaceCopy;
+
+  /// No description provided for @pgtMoveHere.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta qui'**
+  String get pgtMoveHere;
+
+  /// No description provided for @pgtPasteHere.
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla qui'**
+  String get pgtPasteHere;
+
+  /// No description provided for @pgtMoveShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta'**
+  String get pgtMoveShort;
+
+  /// No description provided for @pgtPasteShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla'**
+  String get pgtPasteShort;
+
+  /// No description provided for @pgtPasteCount.
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla {count, plural, one{1 pagina} other{{count} pagine}}'**
+  String pgtPasteCount(int count);
+
+  /// No description provided for @pgtPasteCountShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla {count}'**
+  String pgtPasteCountShort(int count);
+
+  /// No description provided for @pgtThisNotebook.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo taccuino'**
+  String get pgtThisNotebook;
+
+  /// No description provided for @pgtAnotherNotebook.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro taccuino…'**
+  String get pgtAnotherNotebook;
+
+  /// No description provided for @pgtMoveToNb.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta in {notebook}'**
+  String pgtMoveToNb(String notebook);
+
+  /// No description provided for @pgtPasteIntoNb.
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla in {notebook}'**
+  String pgtPasteIntoNb(String notebook);
+
+  /// No description provided for @pgtPosStart.
+  ///
+  /// In it, this message translates to:
+  /// **'All\'inizio'**
+  String get pgtPosStart;
+
+  /// No description provided for @pgtPosAfter.
+  ///
+  /// In it, this message translates to:
+  /// **'Dopo la pagina {page}'**
+  String pgtPosAfter(int page);
+
+  /// No description provided for @pgtPosEnd.
+  ///
+  /// In it, this message translates to:
+  /// **'In fondo'**
+  String get pgtPosEnd;
+
+  /// No description provided for @pgtPosChapterEnd.
+  ///
+  /// In it, this message translates to:
+  /// **'Fine di {chapter}'**
+  String pgtPosChapterEnd(String chapter);
+
+  /// No description provided for @pgtChapterMenuHead.
+  ///
+  /// In it, this message translates to:
+  /// **'Capitolo per le pagine'**
+  String get pgtChapterMenuHead;
+
+  /// No description provided for @pgtTrayMoving.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{1 pagina · in spostamento} other{{count} pagine · in spostamento}}'**
+  String pgtTrayMoving(int count);
+
+  /// No description provided for @pgtTrayCopied.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{1 pagina · copiata} other{{count} pagine · copiate}}'**
+  String pgtTrayCopied(int count);
+
+  /// No description provided for @pgtSavedShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvato'**
+  String get pgtSavedShort;
+
+  /// No description provided for @pgtSavedLong.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvato su questo dispositivo. Resta anche dopo la chiusura dell\'app.'**
+  String get pgtSavedLong;
+
+  /// No description provided for @pgtFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'da {notebook}'**
+  String pgtFrom(String notebook);
+
+  /// No description provided for @pgtFromChapter.
+  ///
+  /// In it, this message translates to:
+  /// **'da {notebook} › {chapter}'**
+  String pgtFromChapter(String notebook, String chapter);
+
+  /// No description provided for @pgtFromSeveral.
+  ///
+  /// In it, this message translates to:
+  /// **'da {notebook} › più capitoli'**
+  String pgtFromSeveral(String notebook);
+
+  /// No description provided for @pgtSourceDeleted.
+  ///
+  /// In it, this message translates to:
+  /// **'{notebook} è stato eliminato, queste pagine ora sono una copia'**
+  String pgtSourceDeleted(String notebook);
+
+  /// No description provided for @pgtTrayOptions.
+  ///
+  /// In it, this message translates to:
+  /// **'Opzioni degli appunti'**
+  String get pgtTrayOptions;
+
+  /// No description provided for @pgtCancelMove.
+  ///
+  /// In it, this message translates to:
+  /// **'Annulla spostamento'**
+  String get pgtCancelMove;
+
+  /// No description provided for @pgtCancelMoveHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Le pagine non sono mai state rimosse'**
+  String get pgtCancelMoveHint;
+
+  /// No description provided for @pgtClearTray.
+  ///
+  /// In it, this message translates to:
+  /// **'Svuota gli appunti'**
+  String get pgtClearTray;
+
+  /// No description provided for @pgtChooseWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli dove, in Pagine'**
+  String get pgtChooseWhere;
+
+  /// No description provided for @pgtChooseWhereHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Apre le pagine di questo taccuino, pronte per incollare gli appunti'**
+  String get pgtChooseWhereHint;
+
+  /// No description provided for @pgtOpenSource.
+  ///
+  /// In it, this message translates to:
+  /// **'Apri {notebook}'**
+  String pgtOpenSource(String notebook);
+
+  /// No description provided for @pgtOpenSourceHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Da dove vengono queste pagine'**
+  String get pgtOpenSourceHint;
+
+  /// No description provided for @pgtUndo.
+  ///
+  /// In it, this message translates to:
+  /// **'Annulla'**
+  String get pgtUndo;
+
+  /// No description provided for @pgtShow.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra'**
+  String get pgtShow;
+
+  /// No description provided for @pgtChooserTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta {count, plural, one{1 pagina} other{{count} pagine}} in…'**
+  String pgtChooserTitle(int count);
+
+  /// No description provided for @pgtRecent.
+  ///
+  /// In it, this message translates to:
+  /// **'Recenti'**
+  String get pgtRecent;
+
+  /// No description provided for @pgtChooserEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Non ci sono altri taccuini su questo dispositivo.'**
+  String get pgtChooserEmpty;
+
+  /// No description provided for @pgtBrowseLibrary.
+  ///
+  /// In it, this message translates to:
+  /// **'Sfoglia la libreria'**
+  String get pgtBrowseLibrary;
+
+  /// No description provided for @pgtNbPages.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{1 pagina} other{{count} pagine}}'**
+  String pgtNbPages(int count);
+
+  /// No description provided for @pgtNbChapters.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{1 capitolo} other{{count} capitoli}}'**
+  String pgtNbChapters(int count);
+
+  /// No description provided for @pgtNbPagesChapters.
+  ///
+  /// In it, this message translates to:
+  /// **'{pages} · {chapters}'**
+  String pgtNbPagesChapters(String pages, String chapters);
+
+  /// No description provided for @pgtLibHintMove.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli un taccuino in cui spostare {count, plural, one{1 pagina} other{{count} pagine}}. Tocca una copertina o usa il suo menu …'**
+  String pgtLibHintMove(int count);
+
+  /// No description provided for @pgtLibHintPaste.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli un taccuino in cui incollare {count, plural, one{1 pagina} other{{count} pagine}}. Tocca una copertina o usa il suo menu …'**
+  String pgtLibHintPaste(int count);
+
+  /// No description provided for @pgtBadgeMoving.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} in spostamento'**
+  String pgtBadgeMoving(int count);
+
+  /// No description provided for @pgtCardMoveHere.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta qui {count, plural, one{1 pagina} other{{count} pagine}}'**
+  String pgtCardMoveHere(int count);
+
+  /// No description provided for @pgtCardPasteHere.
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla qui {count, plural, one{1 pagina} other{{count} pagine}}'**
+  String pgtCardPasteHere(int count);
+
+  /// No description provided for @pgtCardEndOfChapter.
+  ///
+  /// In it, this message translates to:
+  /// **'In fondo a {chapter}'**
+  String pgtCardEndOfChapter(String chapter);
+
+  /// No description provided for @pgtCardAtEnd.
+  ///
+  /// In it, this message translates to:
+  /// **'In fondo'**
+  String get pgtCardAtEnd;
+
+  /// No description provided for @pgtWhereStart.
+  ///
+  /// In it, this message translates to:
+  /// **'all\'inizio'**
+  String get pgtWhereStart;
+
+  /// No description provided for @pgtWhereAfter.
+  ///
+  /// In it, this message translates to:
+  /// **'dopo la pagina {page}'**
+  String pgtWhereAfter(int page);
+
+  /// No description provided for @pgtWhereEnd.
+  ///
+  /// In it, this message translates to:
+  /// **'in fondo'**
+  String get pgtWhereEnd;
+
+  /// No description provided for @pgtWhereChapterEnd.
+  ///
+  /// In it, this message translates to:
+  /// **'in fondo a {chapter}'**
+  String pgtWhereChapterEnd(String chapter);
+
+  /// No description provided for @pgtToastCopied.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Copiata 1 pagina. Apri un taccuino per incollare.} other{Copiate {count} pagine. Apri un taccuino per incollare.}}'**
+  String pgtToastCopied(int count);
+
+  /// No description provided for @pgtToastCopiedSkipped.
+  ///
+  /// In it, this message translates to:
+  /// **'Copiate {count} pagine; {skipped} non ancora caricate sono state saltate.'**
+  String pgtToastCopiedSkipped(int count, int skipped);
+
+  /// No description provided for @pgtToastMoveReady.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{1 pagina pronta da spostare. Non cambia nulla finché non confermi.} other{{count} pagine pronte da spostare. Non cambia nulla finché non confermi.}}'**
+  String pgtToastMoveReady(int count);
+
+  /// No description provided for @pgtToastMoveReadySkipped.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} pagine pronte da spostare; {skipped} non ancora caricate sono state saltate. Non cambia nulla finché non confermi.'**
+  String pgtToastMoveReadySkipped(int count, int skipped);
+
+  /// No description provided for @pgtToastMoveCancelled.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Spostamento annullato. 1 pagina resta in {notebook}.} other{Spostamento annullato. {count} pagine restano in {notebook}.}}'**
+  String pgtToastMoveCancelled(int count, String notebook);
+
+  /// No description provided for @pgtToastTrayCleared.
+  ///
+  /// In it, this message translates to:
+  /// **'Appunti svuotati'**
+  String get pgtToastTrayCleared;
+
+  /// No description provided for @pgtToastPasted.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Incollata 1 pagina in {notebook}, {where}} other{Incollate {count} pagine in {notebook}, {where}}}'**
+  String pgtToastPasted(int count, String notebook, String where);
+
+  /// No description provided for @pgtToastMoved.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Spostata 1 pagina in {notebook}, {where}} other{Spostate {count} pagine in {notebook}, {where}}}'**
+  String pgtToastMoved(int count, String notebook, String where);
+
+  /// No description provided for @pgtToastDuplicated.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Duplicata 1 pagina} other{Duplicate {count} pagine}}'**
+  String pgtToastDuplicated(int count);
+
+  /// No description provided for @pgtToastUndone.
+  ///
+  /// In it, this message translates to:
+  /// **'Annullato'**
+  String get pgtToastUndone;
+
+  /// No description provided for @pgtToastTooMany.
+  ///
+  /// In it, this message translates to:
+  /// **'Negli appunti ci stanno al massimo {max} pagine. Selezionane di meno.'**
+  String pgtToastTooMany(int max);
+
+  /// No description provided for @pgtToastNothing.
+  ///
+  /// In it, this message translates to:
+  /// **'Queste pagine non sono ancora pronte (in caricamento). Riprova tra un momento.'**
+  String get pgtToastNothing;
+
+  /// No description provided for @pgtToastTrayNotSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile salvare gli appunti su questo dispositivo. Andranno persi alla chiusura dell\'app.'**
+  String get pgtToastTrayNotSaved;
+
+  /// No description provided for @pgtToastPagesGone.
+  ///
+  /// In it, this message translates to:
+  /// **'Queste pagine non sono più in questo taccuino.'**
+  String get pgtToastPagesGone;
+
+  /// No description provided for @pgtToastTrayDamaged.
+  ///
+  /// In it, this message translates to:
+  /// **'Gli appunti salvati sono incompleti, non è stato incollato nulla.'**
+  String get pgtToastTrayDamaged;
+
+  /// No description provided for @pgtToastDestFailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile salvare le pagine incollate. Non è cambiato nulla.'**
+  String get pgtToastDestFailed;
+
+  /// No description provided for @pgtToastDestUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo taccuino non si può modificare ora. Non è cambiato nulla.'**
+  String get pgtToastDestUnavailable;
+
+  /// No description provided for @pgtToastSourceFailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Le pagine sono state aggiunte, ma non si sono potute rimuovere da {notebook}. Ora sono in entrambi i taccuini; le pagine negli appunti sono diventate una copia.'**
+  String pgtToastSourceFailed(String notebook);
+
+  /// No description provided for @pgtToastMoveResumed.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Completato lo spostamento di 1 pagina rimasto a metà.} other{Completato lo spostamento di {count} pagine rimasto a metà.}}'**
+  String pgtToastMoveResumed(int count);
+
+  /// No description provided for @pgtToastUndoFailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile annullare. Controlla i due taccuini.'**
+  String get pgtToastUndoFailed;
 }
 
 class _AppLocalizationsDelegate

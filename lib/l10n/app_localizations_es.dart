@@ -2076,7 +2076,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String pmSelectedCount(int count) {
-    return '$count seleccionadas';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seleccionadas',
+      one: '1 seleccionada',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3101,4 +3107,449 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get pgtTitlePages => 'Páginas';
+
+  @override
+  String pgtEyebrow(String notebook, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return '$notebook · $_temp0';
+  }
+
+  @override
+  String get pgtSelect => 'Seleccionar';
+
+  @override
+  String get pgtSelectPages => 'Seleccionar páginas';
+
+  @override
+  String get pgtAll => 'Todas';
+
+  @override
+  String get pgtNone => 'Ninguna';
+
+  @override
+  String get pgtDone => 'Listo';
+
+  @override
+  String get pgtNoChapter => 'Sin capítulo';
+
+  @override
+  String get pgtCopy => 'Copiar';
+
+  @override
+  String get pgtMove => 'Mover';
+
+  @override
+  String get pgtTagMoving => 'moviendo';
+
+  @override
+  String get pgtHintPlaceMove =>
+      'Toca una página para colocarlas después de ella, o su borde izquierdo para colocarlas antes. Nada cambia hasta que confirmes.';
+
+  @override
+  String get pgtHintPlaceCopy =>
+      'Toca una página para pegar después de ella, o su borde izquierdo para pegar antes.';
+
+  @override
+  String get pgtMoveHere => 'Mover aquí';
+
+  @override
+  String get pgtPasteHere => 'Pegar aquí';
+
+  @override
+  String get pgtMoveShort => 'Mover';
+
+  @override
+  String get pgtPasteShort => 'Pegar';
+
+  @override
+  String pgtPasteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return 'Pegar $_temp0';
+  }
+
+  @override
+  String pgtPasteCountShort(int count) {
+    return 'Pegar $count';
+  }
+
+  @override
+  String get pgtThisNotebook => 'Este cuaderno';
+
+  @override
+  String get pgtAnotherNotebook => 'Otro cuaderno…';
+
+  @override
+  String pgtMoveToNb(String notebook) {
+    return 'Mover a $notebook';
+  }
+
+  @override
+  String pgtPasteIntoNb(String notebook) {
+    return 'Pegar en $notebook';
+  }
+
+  @override
+  String get pgtPosStart => 'Al principio';
+
+  @override
+  String pgtPosAfter(int page) {
+    return 'Después de la página $page';
+  }
+
+  @override
+  String get pgtPosEnd => 'Al final';
+
+  @override
+  String pgtPosChapterEnd(String chapter) {
+    return 'Final de $chapter';
+  }
+
+  @override
+  String get pgtChapterMenuHead => 'Capítulo para las páginas';
+
+  @override
+  String pgtTrayMoving(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas · moviendo',
+      one: '1 página · moviendo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtTrayCopied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas · copiadas',
+      one: '1 página · copiada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtSavedShort => 'Guardado';
+
+  @override
+  String get pgtSavedLong =>
+      'Guardado en este dispositivo. Sigue ahí al cerrar la app.';
+
+  @override
+  String pgtFrom(String notebook) {
+    return 'de $notebook';
+  }
+
+  @override
+  String pgtFromChapter(String notebook, String chapter) {
+    return 'de $notebook › $chapter';
+  }
+
+  @override
+  String pgtFromSeveral(String notebook) {
+    return 'de $notebook › varios capítulos';
+  }
+
+  @override
+  String pgtSourceDeleted(String notebook) {
+    return '$notebook se eliminó, estas páginas ahora son una copia';
+  }
+
+  @override
+  String get pgtTrayOptions => 'Opciones de la bandeja de páginas';
+
+  @override
+  String get pgtCancelMove => 'Cancelar el movimiento';
+
+  @override
+  String get pgtCancelMoveHint => 'Las páginas nunca se quitaron';
+
+  @override
+  String get pgtClearTray => 'Vaciar la bandeja';
+
+  @override
+  String get pgtChooseWhere => 'Elegir dónde, en Páginas';
+
+  @override
+  String get pgtChooseWhereHint =>
+      'Abre las páginas de este cuaderno con la bandeja lista';
+
+  @override
+  String pgtOpenSource(String notebook) {
+    return 'Abrir $notebook';
+  }
+
+  @override
+  String get pgtOpenSourceHint => 'De dónde vienen estas páginas';
+
+  @override
+  String get pgtUndo => 'Deshacer';
+
+  @override
+  String get pgtShow => 'Mostrar';
+
+  @override
+  String pgtChooserTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return 'Mover $_temp0 a…';
+  }
+
+  @override
+  String get pgtRecent => 'Recientes';
+
+  @override
+  String get pgtChooserEmpty => 'No hay otros cuadernos en este dispositivo.';
+
+  @override
+  String get pgtBrowseLibrary => 'Explorar la biblioteca';
+
+  @override
+  String pgtNbPages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtNbChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capítulos',
+      one: '1 capítulo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtNbPagesChapters(String pages, String chapters) {
+    return '$pages · $chapters';
+  }
+
+  @override
+  String pgtLibHintMove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return 'Elige un cuaderno al que mover $_temp0. Toca una portada o usa su menú …';
+  }
+
+  @override
+  String pgtLibHintPaste(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return 'Elige un cuaderno donde pegar $_temp0. Toca una portada o usa su menú …';
+  }
+
+  @override
+  String pgtBadgeMoving(int count) {
+    return '$count moviendo';
+  }
+
+  @override
+  String pgtCardMoveHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return 'Mover aquí $_temp0';
+  }
+
+  @override
+  String pgtCardPasteHere(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas',
+      one: '1 página',
+    );
+    return 'Pegar aquí $_temp0';
+  }
+
+  @override
+  String pgtCardEndOfChapter(String chapter) {
+    return 'Al final de $chapter';
+  }
+
+  @override
+  String get pgtCardAtEnd => 'Al final';
+
+  @override
+  String get pgtWhereStart => 'al principio';
+
+  @override
+  String pgtWhereAfter(int page) {
+    return 'después de la página $page';
+  }
+
+  @override
+  String get pgtWhereEnd => 'al final';
+
+  @override
+  String pgtWhereChapterEnd(String chapter) {
+    return 'al final de $chapter';
+  }
+
+  @override
+  String pgtToastCopied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas copiadas. Abre un cuaderno para pegar.',
+      one: '1 página copiada. Abre un cuaderno para pegar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastCopiedSkipped(int count, int skipped) {
+    return 'Copiadas $count páginas; se omitieron $skipped aún sin cargar.';
+  }
+
+  @override
+  String pgtToastMoveReady(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count páginas listas para mover. Nada cambia hasta que confirmes.',
+      one: '1 página lista para mover. Nada cambia hasta que confirmes.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastMoveReadySkipped(int count, int skipped) {
+    return '$count páginas listas para mover; se omitieron $skipped aún sin cargar. Nada cambia hasta que confirmes.';
+  }
+
+  @override
+  String pgtToastMoveCancelled(int count, String notebook) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Movimiento cancelado. $count páginas siguen en $notebook.',
+      one: 'Movimiento cancelado. 1 página sigue en $notebook.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastTrayCleared => 'Bandeja vaciada';
+
+  @override
+  String pgtToastPasted(int count, String notebook, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pegadas $count páginas en $notebook, $where',
+      one: 'Pegada 1 página en $notebook, $where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastMoved(int count, String notebook, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Movidas $count páginas a $notebook, $where',
+      one: 'Movida 1 página a $notebook, $where',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pgtToastDuplicated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count páginas duplicadas',
+      one: '1 página duplicada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastUndone => 'Deshecho';
+
+  @override
+  String pgtToastTooMany(int max) {
+    return 'La bandeja admite hasta $max páginas. Selecciona menos.';
+  }
+
+  @override
+  String get pgtToastNothing =>
+      'Estas páginas aún no están listas (se están cargando). Inténtalo de nuevo en un momento.';
+
+  @override
+  String get pgtToastTrayNotSaved =>
+      'No se pudo guardar la bandeja en este dispositivo. Se perderá al cerrar la app.';
+
+  @override
+  String get pgtToastPagesGone => 'Esas páginas ya no están en este cuaderno.';
+
+  @override
+  String get pgtToastTrayDamaged =>
+      'La bandeja guardada está incompleta, no se pegó nada.';
+
+  @override
+  String get pgtToastDestFailed =>
+      'No se pudieron guardar las páginas pegadas. No se cambió nada.';
+
+  @override
+  String get pgtToastDestUnavailable =>
+      'Ese cuaderno no se puede editar ahora. No se cambió nada.';
+
+  @override
+  String pgtToastSourceFailed(String notebook) {
+    return 'Las páginas se añadieron, pero no se pudieron quitar de $notebook. Están en ambos cuadernos; la bandeja ahora es una copia.';
+  }
+
+  @override
+  String pgtToastMoveResumed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Se completó el movimiento interrumpido de $count páginas.',
+      one: 'Se completó el movimiento interrumpido de 1 página.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pgtToastUndoFailed =>
+      'No se pudo deshacer. Revisa ambos cuadernos.';
 }
