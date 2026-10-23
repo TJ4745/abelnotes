@@ -3101,4 +3101,15 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get qtResumeSyncNeedsOpen =>
       'Ce carnet se synchronise à nouveau. Ouvrez-le pour fusionner les modifications faites sur un autre appareil.';
+
+  @override
+  String libImportSuccessMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count carnets importés',
+      one: '$count carnet importé',
+    );
+    return '$_temp0';
+  }
 }

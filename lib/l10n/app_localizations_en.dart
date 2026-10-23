@@ -3080,4 +3080,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get qtResumeSyncNeedsOpen =>
       'This notebook syncs again. Open it to merge changes made on another device.';
+
+  @override
+  String libImportSuccessMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Imported $count notebooks',
+      one: 'Imported $count notebook',
+    );
+    return '$_temp0';
+  }
 }

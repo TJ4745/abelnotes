@@ -2556,5 +2556,7 @@
   "qtNeedsOpenToUploadHint": "Aprilo per unire e caricare le tue modifiche.",
   "@qtNeedsOpenToUploadHint": {},
   "qtResumeSyncNeedsOpen": "Il quaderno si sincronizza di nuovo. Aprilo per unire le modifiche fatte su un altro dispositivo.",
-  "@qtResumeSyncNeedsOpen": {}
+  "@qtResumeSyncNeedsOpen": {},
+  "libImportSuccessMany": "{count, plural, one{Importato {count} quaderno} other{Importati {count} quaderni}}",
+  "@libImportSuccessMany": {"placeholders": {"count": {"type": "int"}}}
 }

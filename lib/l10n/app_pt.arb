@@ -843,5 +843,6 @@
   "quDefaultChapter": "Capítulo 1",
   "qtNeedsOpenToUpload": "{count, plural, one{{count} caderno também mudou em outro dispositivo} other{{count} cadernos também mudaram em outro dispositivo}}",
   "qtNeedsOpenToUploadHint": "Abra-o para mesclar e enviar as suas alterações.",
-  "qtResumeSyncNeedsOpen": "Este caderno volta a sincronizar. Abra-o para mesclar as alterações feitas em outro dispositivo."
+  "qtResumeSyncNeedsOpen": "Este caderno volta a sincronizar. Abra-o para mesclar as alterações feitas em outro dispositivo.",
+  "libImportSuccessMany": "{count, plural, one{{count} caderno importado} other{{count} cadernos importados}}"
 }

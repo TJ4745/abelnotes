@@ -953,6 +953,13 @@ class WebDavService implements RemoteStore {
                   Duration(milliseconds: 400 * (1 << attempt)));
               continue;
             }
+            // Only a smaller copy is a truncation; a larger one is another
+            // device's newer write and must be left alone.
+            if (remoteSize < data.length) {
+              try {
+                await delete(remotePath);
+              } catch (_) {}
+            }
             throw lastError as WebDavSizeMismatchException;
           }
         }
@@ -1111,7 +1118,7 @@ class WebDavService implements RemoteStore {
       DateTime? lastModified;
       final lmEls = document.findAllElements('getlastmodified', namespace: '*');
       if (lmEls.isNotEmpty && lmEls.first.innerText.isNotEmpty) {
-        lastModified = _parseHttpDate(lmEls.first.innerText);
+        lastModified = parseHttpDate(lmEls.first.innerText);
       }
       return (version: etag, lastModified: lastModified);
     } catch (_) {
@@ -1360,7 +1367,7 @@ class WebDavService implements RemoteStore {
         DateTime? lastModified;
         final lmEl = prop.findElements('getlastmodified', namespace: '*');
         if (lmEl.isNotEmpty && lmEl.first.innerText.isNotEmpty) {
-          lastModified = _parseHttpDate(lmEl.first.innerText);
+          lastModified = parseHttpDate(lmEl.first.innerText);
         }
 
         String? contentType;
@@ -1497,30 +1504,29 @@ class WebDavNotModifiedException implements Exception {
       'for If-None-Match=$etag';
 }
 
-/// Parsa date HTTP (RFC 1123: "Sun, 06 Nov 1994 08:49:37 GMT").
-DateTime _parseHttpDate(String dateStr) {
+/// Parsa date HTTP (RFC 1123: "Sun, 06 Nov 1994 08:49:37 GMT"); null se
+/// illeggibile, così un chiamante non scambia "ignota" per "recente".
+@visibleForTesting
+DateTime? parseHttpDate(String dateStr) {
   const months = {
     'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
     'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
   };
-  try {
-    // Prova ISO 8601 prima
-    return DateTime.parse(dateStr);
-  } catch (_) {
-    // Prova RFC 1123
-    final parts = dateStr.split(' ');
-    if (parts.length >= 5) {
-      final day = int.tryParse(parts[1]) ?? 1;
-      final month = months[parts[2]] ?? 1;
-      final year = int.tryParse(parts[3]) ?? 2026;
-      final timeParts = parts[4].split(':');
-      return DateTime.utc(
-        year, month, day,
-        int.tryParse(timeParts[0]) ?? 0,
-        int.tryParse(timeParts[1]) ?? 0,
-        timeParts.length > 2 ? (int.tryParse(timeParts[2]) ?? 0) : 0,
-      );
-    }
-    return DateTime.now();
+  final iso = DateTime.tryParse(dateStr);
+  if (iso != null) return iso;
+  final parts = dateStr.trim().split(RegExp(r'\s+'));
+  if (parts.length < 5) return null;
+  final day = int.tryParse(parts[1]);
+  final month = months[parts[2]];
+  final year = int.tryParse(parts[3]);
+  final time = parts[4].split(':');
+  if (day == null || month == null || year == null || time.length < 2) {
+    return null;
   }
+  final h = int.tryParse(time[0]);
+  final m = int.tryParse(time[1]);
+  final sec = time.length > 2 ? int.tryParse(time[2]) : 0;
+  if (h == null || m == null || sec == null) return null;
+  if (day < 1 || day > 31 || h > 23 || m > 59 || sec > 60) return null;
+  return DateTime.utc(year, month, day, h, m, sec);
 }

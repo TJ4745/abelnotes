@@ -843,5 +843,6 @@
   "quDefaultChapter": "第 1 章",
   "qtNeedsOpenToUpload": "{count, plural, one{有 {count} 个笔记本在其他设备上也有更改} other{有 {count} 个笔记本在其他设备上也有更改}}",
   "qtNeedsOpenToUploadHint": "打开它即可合并并上传你的更改。",
-  "qtResumeSyncNeedsOpen": "此笔记本已恢复同步。打开它以合并在其他设备上所做的更改。"
+  "qtResumeSyncNeedsOpen": "此笔记本已恢复同步。打开它以合并在其他设备上所做的更改。",
+  "libImportSuccessMany": "已导入 {count} 个笔记本"
 }

@@ -878,5 +878,6 @@
   "qtNeedsOpenToUploadHint": "Open it to merge and upload your changes.",
   "@qtNeedsOpenToUploadHint": {},
   "qtResumeSyncNeedsOpen": "This notebook syncs again. Open it to merge changes made on another device.",
-  "@qtResumeSyncNeedsOpen": {}
+  "@qtResumeSyncNeedsOpen": {},
+  "libImportSuccessMany": "{count, plural, one{Imported {count} notebook} other{Imported {count} notebooks}}"
 }

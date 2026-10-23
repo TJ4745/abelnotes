@@ -878,5 +878,6 @@
   "qtNeedsOpenToUploadHint": "Ouvrez-le pour fusionner et envoyer vos modifications.",
   "@qtNeedsOpenToUploadHint": {},
   "qtResumeSyncNeedsOpen": "Ce carnet se synchronise à nouveau. Ouvrez-le pour fusionner les modifications faites sur un autre appareil.",
-  "@qtResumeSyncNeedsOpen": {}
+  "@qtResumeSyncNeedsOpen": {},
+  "libImportSuccessMany": "{count, plural, one{{count} carnet importé} other{{count} carnets importés}}"
 }

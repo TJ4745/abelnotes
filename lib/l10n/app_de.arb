@@ -878,5 +878,6 @@
   "qtNeedsOpenToUploadHint": "Öffne es, um deine Änderungen zusammenzuführen und hochzuladen.",
   "@qtNeedsOpenToUploadHint": {},
   "qtResumeSyncNeedsOpen": "Dieses Notizbuch wird wieder synchronisiert. Öffne es, um Änderungen von einem anderen Gerät zusammenzuführen.",
-  "@qtResumeSyncNeedsOpen": {}
+  "@qtResumeSyncNeedsOpen": {},
+  "libImportSuccessMany": "{count, plural, one{{count} Notizbuch importiert} other{{count} Notizbücher importiert}}"
 }

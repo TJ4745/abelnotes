@@ -3092,4 +3092,15 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get qtResumeSyncNeedsOpen =>
       'Il quaderno si sincronizza di nuovo. Aprilo per unire le modifiche fatte su un altro dispositivo.';
+
+  @override
+  String libImportSuccessMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Importati $count quaderni',
+      one: 'Importato $count quaderno',
+    );
+    return '$_temp0';
+  }
 }

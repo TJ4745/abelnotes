@@ -3090,4 +3090,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get qtResumeSyncNeedsOpen =>
       'Este cuaderno vuelve a sincronizarse. Ábrelo para combinar los cambios hechos en otro dispositivo.';
+
+  @override
+  String libImportSuccessMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cuadernos importados',
+      one: '$count cuaderno importado',
+    );
+    return '$_temp0';
+  }
 }

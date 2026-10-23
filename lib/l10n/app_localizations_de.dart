@@ -3104,4 +3104,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get qtResumeSyncNeedsOpen =>
       'Dieses Notizbuch wird wieder synchronisiert. Öffne es, um Änderungen von einem anderen Gerät zusammenzuführen.';
+
+  @override
+  String libImportSuccessMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Notizbücher importiert',
+      one: '$count Notizbuch importiert',
+    );
+    return '$_temp0';
+  }
 }

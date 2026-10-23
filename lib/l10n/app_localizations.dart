@@ -4991,6 +4991,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Il quaderno si sincronizza di nuovo. Aprilo per unire le modifiche fatte su un altro dispositivo.'**
   String get qtResumeSyncNeedsOpen;
+
+  /// No description provided for @libImportSuccessMany.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Importato {count} quaderno} other{Importati {count} quaderni}}'**
+  String libImportSuccessMany(int count);
 }
 
 class _AppLocalizationsDelegate

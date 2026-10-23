@@ -878,5 +878,6 @@
   "qtNeedsOpenToUploadHint": "Ábrelo para combinar y subir tus cambios.",
   "@qtNeedsOpenToUploadHint": {},
   "qtResumeSyncNeedsOpen": "Este cuaderno vuelve a sincronizarse. Ábrelo para combinar los cambios hechos en otro dispositivo.",
-  "@qtResumeSyncNeedsOpen": {}
+  "@qtResumeSyncNeedsOpen": {},
+  "libImportSuccessMany": "{count, plural, one{{count} cuaderno importado} other{{count} cuadernos importados}}"
 }

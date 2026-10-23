@@ -70,6 +70,10 @@ class GoogleDriveStore implements RemoteStore {
   /// a stale id would otherwise resurrect a file the user removed.
   final Map<String, String> _idCache = {};
 
+  /// Folder find-or-create runs in flight, keyed by dir path, so concurrent
+  /// callers share one create instead of making twin folders.
+  final Map<String, Future<String>> _folderInflight = {};
+
   int _inFlight = 0;
   final _waiting = <Completer<void>>[];
   final _rand = Random();
@@ -128,14 +132,16 @@ class GoogleDriveStore implements RemoteStore {
   @override
   Future<Uint8List> downloadFile(String remotePath,
       {int? timeoutSeconds, bool criticalVerify = false}) async {
-    final id = await _fileId(remotePath);
-    if (id == null) {
+    final res = await _withFileId(
+      remotePath,
+      (id) => _send(
+        () => _get('/files/$id', {'alt': 'media'}),
+        timeoutSeconds: timeoutSeconds,
+      ),
+    );
+    if (res == null) {
       throw RemoteStoreException('no such file: $remotePath', 404);
     }
-    final res = await _send(
-      () => _get('/files/$id', {'alt': 'media'}),
-      timeoutSeconds: timeoutSeconds,
-    );
     final bytes = res.bodyBytes;
     // An empty 200 is a truncated read far more often than a genuinely
     // empty file, and the engine cannot tell the two apart downstream —
@@ -161,21 +167,33 @@ class GoogleDriveStore implements RemoteStore {
     if (parent == null) {
       throw RemoteStoreException('cannot create $parentPath', 500);
     }
-    final existing = await _fileId(remotePath);
     final name = _nameOf(remotePath);
 
     // Drive keeps no notion of "overwrite by name": creating twice yields
     // two files with the same name, and the engine would then read whichever
     // came back first. Update when we already know the id.
-    final metadata = existing == null
-        ? {'name': name, 'parents': [parent]}
-        : {'name': name};
-    final res = await _send(
-      () => data.length > _multipartMaxBytes
-          ? _resumableUpload(id: existing, metadata: metadata, data: data)
-          : _multipartUpload(id: existing, metadata: metadata, data: data),
-      timeoutSeconds: timeoutSeconds,
-    );
+    Future<http.Response> put(String? existing) {
+      final metadata = existing == null
+          ? {'name': name, 'parents': [parent]}
+          : {'name': name};
+      return _send(
+        () => data.length > _multipartMaxBytes
+            ? _resumableUpload(id: existing, metadata: metadata, data: data)
+            : _multipartUpload(id: existing, metadata: metadata, data: data),
+        timeoutSeconds: timeoutSeconds,
+      );
+    }
+
+    final existing = await _fileId(remotePath);
+    http.Response res;
+    try {
+      res = await put(existing);
+    } on RemoteStoreException catch (e) {
+      // Stale cached id (deleted elsewhere): re-resolve and retry once.
+      if (e.statusCode != 404 || existing == null) rethrow;
+      _forget(remotePath);
+      res = await put(await _fileId(remotePath));
+    }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     _idCache[remotePath] = body['id'] as String;
     return body['md5Checksum'] as String?;
@@ -188,10 +206,20 @@ class GoogleDriveStore implements RemoteStore {
 
   @override
   Future<void> delete(String remotePath) async {
-    final id = await _fileId(remotePath) ??
-        await _folderId(_asDir(remotePath), createMissing: false);
-    if (id == null) return; // already gone: deleting is idempotent
-    await _send(() => _request('DELETE', '$_apiRoot/files/$id'));
+    // Two passes: a 404 on a cached id may just be staleness, so look up
+    // afresh once; a 404 on that is "already gone" and counts as success.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final id = await _fileId(remotePath) ??
+          await _folderId(_asDir(remotePath), createMissing: false);
+      if (id == null) break; // already gone: deleting is idempotent
+      try {
+        await _send(() => _request('DELETE', '$_apiRoot/files/$id'));
+        break;
+      } on RemoteStoreException catch (e) {
+        if (e.statusCode != 404) rethrow;
+        _forget(remotePath);
+      }
+    }
     _forget(remotePath);
   }
 
@@ -200,13 +228,18 @@ class GoogleDriveStore implements RemoteStore {
     if (await _fileId(toPath) != null) {
       throw RemoteStoreException('rename target exists: $toPath', 412);
     }
-    final id = await _fileId(fromPath);
-    if (id == null) throw RemoteStoreException('no such file: $fromPath', 404);
-    await _send(() => _request('PATCH', '$_apiRoot/files/$id',
-        headers: {'Content-Type': 'application/json'},
-        body: utf8.encode(jsonEncode({'name': _nameOf(toPath)}))));
+    String? movedId;
+    final res = await _withFileId(fromPath, (id) async {
+      movedId = id;
+      return _send(() => _request('PATCH', '$_apiRoot/files/$id',
+          headers: {'Content-Type': 'application/json'},
+          body: utf8.encode(jsonEncode({'name': _nameOf(toPath)}))));
+    });
+    if (res == null) {
+      throw RemoteStoreException('no such file: $fromPath', 404);
+    }
     _forget(fromPath);
-    _idCache[toPath] = id;
+    _idCache[toPath] = movedId!;
   }
 
   @override
@@ -243,10 +276,27 @@ class GoogleDriveStore implements RemoteStore {
   // ── Path resolution ───────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> _metadata(String remotePath) async {
-    final id = await _fileId(remotePath);
-    if (id == null) return null;
-    final res = await _send(() => _get('/files/$id', {'fields': _fileFields}));
+    final res = await _withFileId(remotePath,
+        (id) => _send(() => _get('/files/$id', {'fields': _fileFields})));
+    if (res == null) return null;
     return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Runs [op] with the id of [remotePath]; null when there is no such file.
+  /// A 404 means the cached id went stale (deleted elsewhere), so drop it
+  /// and retry once with a fresh lookup.
+  Future<T?> _withFileId<T>(
+      String remotePath, Future<T> Function(String id) op) async {
+    for (var attempt = 0;; attempt++) {
+      final id = await _fileId(remotePath);
+      if (id == null) return null;
+      try {
+        return await op(id);
+      } on RemoteStoreException catch (e) {
+        if (e.statusCode != 404 || attempt > 0) rethrow;
+        _forget(remotePath);
+      }
+    }
   }
 
   /// Id of the file at [remotePath], or null when it isn't there.
@@ -277,20 +327,36 @@ class GoogleDriveStore implements RemoteStore {
         parentId = known;
         continue;
       }
-      var id = await _childId(parentId, segment, folder: true);
-      if (id == null) {
-        if (!createMissing) return null;
-        id = await _createFolder(segment, parentId);
-      }
+      final id = createMissing
+          ? await _ensureFolder(walked, segment, parentId)
+          : await _childId(parentId, segment, folder: true);
+      if (id == null) return null;
       _idCache[walked] = id;
       parentId = id;
     }
     return parentId;
   }
 
+  /// Find-or-create one folder, shared by concurrent callers: two creates
+  /// for the same path would leave twin folders and hide notebooks.
+  Future<String> _ensureFolder(String path, String name, String parentId) {
+    final pending = _folderInflight[path];
+    if (pending != null) return pending;
+    final run = () async {
+      final known = _idCache[path];
+      if (known != null) return known;
+      final id = await _childId(parentId, name, folder: true) ??
+          await _createFolder(name, parentId);
+      _idCache[path] = id;
+      return id;
+    }();
+    _folderInflight[path] = run;
+    return run.whenComplete(() => _folderInflight.remove(path));
+  }
+
   Future<String?> _childId(String parentId, String name,
       {required bool folder}) async {
-    final escaped = name.replaceAll("'", r"\'");
+    final escaped = name.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
     final res = await _send(() => _get('/files', {
           'q': "'$parentId' in parents and name = '$escaped' "
               "and trashed = false"

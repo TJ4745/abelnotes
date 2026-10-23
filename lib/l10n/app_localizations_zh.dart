@@ -2992,4 +2992,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get qtResumeSyncNeedsOpen => '此笔记本已恢复同步。打开它以合并在其他设备上所做的更改。';
+
+  @override
+  String libImportSuccessMany(int count) {
+    return '已导入 $count 个笔记本';
+  }
 }

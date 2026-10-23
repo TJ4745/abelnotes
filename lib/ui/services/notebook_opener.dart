@@ -31,7 +31,41 @@ class NoLocalCopyOfflineException implements Exception {
 /// trapped: back popped the top one, `closeNotebook()` nulled the shared
 /// canvasProvider, and the second editor underneath rebuilt into the
 /// "no notebook open" fallback with nothing left to open.
-bool _openInFlight = false;
+///
+/// Cancel releases it at once (the stale call may sit minutes in a download),
+/// and a generation token keeps that stale call from touching the canvas or
+/// navigator when it finally resumes.
+@visibleForTesting
+class OpenGate {
+  int _gen = 0;
+  bool _busy = false;
+
+  /// A token for the new open, or null when one is already in flight.
+  int? begin() {
+    if (_busy) return null;
+    _busy = true;
+    return ++_gen;
+  }
+
+  /// True while [token] is the open the user is still waiting for.
+  bool isCurrent(int token) => _busy && token == _gen;
+
+  /// Releases the guard and invalidates [token].
+  void cancel(int token) {
+    if (token != _gen) return;
+    _busy = false;
+    _gen++;
+  }
+
+  /// True when [token] was cancelled and no newer open started since.
+  bool cancelledWithoutSuccessor(int token) => !_busy && _gen == token + 1;
+
+  void end(int token) {
+    if (token == _gen) _busy = false;
+  }
+}
+
+final _openGate = OpenGate();
 
 /// Opens a notebook: loads it (local first, server fallback), populates
 /// canvasProvider, then pushes the editor screen. Mirrors the legacy
@@ -44,12 +78,12 @@ Future<void> openNotebookAndNavigate(
   NotebookEntry entry, {
   Rect? origin,
 }) async {
-  if (_openInFlight) return;
-  _openInFlight = true;
+  final token = _openGate.begin();
+  if (token == null) return;
   try {
-    await _openNotebookAndNavigate(context, ref, entry, origin);
+    await _openNotebookAndNavigate(context, ref, entry, origin, token);
   } finally {
-    _openInFlight = false;
+    _openGate.end(token);
   }
 }
 
@@ -72,13 +106,13 @@ Future<void> _openNotebookAndNavigate(
   WidgetRef ref,
   NotebookEntry entry,
   Rect? origin,
+  int token,
 ) async {
   final l10n = AppLocalizations.of(context);
   // A download from an unreachable server can take minutes: the user may
   // walk away from it. System back is blocked because the pop below would
   // then close the library instead of the loader.
   var loaderOpen = true;
-  var cancelled = false;
   void dismissLoader() {
     if (!loaderOpen) return;
     loaderOpen = false;
@@ -101,7 +135,7 @@ Future<void> _openNotebookAndNavigate(
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () {
-                  cancelled = true;
+                  _openGate.cancel(token);
                   loaderOpen = false;
                   Navigator.of(dctx).pop();
                 },
@@ -114,10 +148,13 @@ Future<void> _openNotebookAndNavigate(
     ),
   );
 
-  /// After an await: true when the user cancelled, closing anything opened.
+  /// After an await: true when the user cancelled. Only closes the canvas if
+  /// no newer open took over, which would replace it itself.
   Future<bool> abandoned() async {
-    if (!cancelled) return false;
-    await ref.read(canvasProvider.notifier).closeNotebook();
+    if (_openGate.isCurrent(token)) return false;
+    if (_openGate.cancelledWithoutSuccessor(token)) {
+      await ref.read(canvasProvider.notifier).closeNotebook();
+    }
     return true;
   }
 
@@ -143,6 +180,7 @@ Future<void> _openNotebookAndNavigate(
         final corrupted =
             data.pages.isEmpty && data.document.pages.isNotEmpty;
         if (!corrupted) {
+          if (await abandoned()) return;
           await ref.read(canvasProvider.notifier).openNotebook(
                 metadata: data.metadata,
                 document: data.document,
@@ -187,6 +225,7 @@ Future<void> _openNotebookAndNavigate(
 
       final corrupted = pages.isEmpty && parsed.document.pages.isNotEmpty;
       if (!corrupted) {
+        if (await abandoned()) return;
         await ref.read(canvasProvider.notifier).openNotebook(
               metadata: parsed.metadata,
               document: parsed.document,
@@ -242,6 +281,7 @@ Future<void> _openNotebookAndNavigate(
       debugPrint('[NotebookOpener] persist after download failed: $e');
     }
 
+    if (await abandoned()) return;
     await ref.read(canvasProvider.notifier).openNotebook(
           metadata: result.metadata,
           document: result.document,
@@ -259,7 +299,7 @@ Future<void> _openNotebookAndNavigate(
     dismissLoader();
     await Navigator.of(context).push(_editorRoute(origin, entry));
   } catch (e) {
-    if (!context.mounted || cancelled) return;
+    if (!context.mounted || !_openGate.isCurrent(token)) return;
     dismissLoader();
     // Typed exceptions carry no user-facing text: localize them here, at the
     // point of display. Everything else falls back to the generic message.

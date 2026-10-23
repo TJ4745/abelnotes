@@ -279,4 +279,132 @@ void main() {
     final dir = items.firstWhere((i) => i.isDirectory);
     expect(dir.path, '/AbelNotes/scratch/', reason: 'directories keep a slash');
   });
+
+  // ── Stale ids, duplicate folders, query escaping ──────────────────────
+
+  const notFound = {
+    'error': {'message': 'File not found'}
+  };
+
+  /// Primes the id cache the way a sync does: folder lookup, then listing.
+  Future<GoogleDriveStore> storeWithListedFile() async {
+    fake.reply({'files': [{'id': 'folder-1'}]});
+    fake.reply({
+      'files': [
+        {'id': 'f1', 'name': 'nb.abelnote', 'mimeType': 'application/octet-stream'},
+      ]
+    });
+    final s = store();
+    await s.listDirectory('/AbelNotes/');
+    fake.seen.clear();
+    return s;
+  }
+
+  test('delete treats a 404 on a stale cached id as already gone', () async {
+    final s = await storeWithListedFile();
+    fake.reply(notFound, status: 404); // DELETE f1: removed by another device
+
+    await s.delete('/AbelNotes/nb.abelnote');
+
+    expect(fake.seen.first.method, 'DELETE');
+  });
+
+  test('a stale id is dropped and re-resolved for metadata reads', () async {
+    final s = await storeWithListedFile();
+    fake.reply(notFound, status: 404); // GET f1
+    fake.reply({'files': [{'id': 'f2'}]}); // re-created under a new id
+    fake.reply({'id': 'f2', 'md5Checksum': 'new'});
+
+    expect(await s.getVersion('/AbelNotes/nb.abelnote'), 'new');
+    expect(fake.seen.last.url.path, endsWith('/files/f2'));
+  });
+
+  test('a stale id for a vanished file reads as absent, not an error',
+      () async {
+    final s = await storeWithListedFile();
+    fake.reply(notFound, status: 404);
+    fake.reply({'files': []});
+
+    expect(await s.getVersion('/AbelNotes/nb.abelnote'), isNull);
+  });
+
+  test('upload over a stale id falls back to creating the file', () async {
+    final s = await storeWithListedFile();
+    fake.reply(notFound, status: 404); // PATCH f1
+    fake.reply({'files': []}); // really gone
+    fake.reply({'id': 'f9', 'md5Checksum': 'v1'});
+
+    final version =
+        await s.uploadFile('/AbelNotes/nb.abelnote', Uint8List.fromList([1]));
+
+    expect(version, 'v1');
+    final last = fake.seen.last as http.Request;
+    expect(last.method, 'POST');
+    expect(last.body, contains('"parents":["folder-1"]'));
+  });
+
+  test('rename over a stale source id re-resolves it', () async {
+    final s = await storeWithListedFile();
+    fake.reply({'files': []}); // target free
+    fake.reply(notFound, status: 404); // PATCH f1
+    fake.reply({'files': [{'id': 'f2'}]});
+    fake.reply({'id': 'f2'});
+
+    await s.rename('/AbelNotes/nb.abelnote', '/AbelNotes/other.abelnote');
+
+    expect(fake.seen.last.method, 'PATCH');
+    expect(fake.seen.last.url.path, endsWith('/files/f2'));
+  });
+
+  test('concurrent creates of the same missing folder make only one',
+      () async {
+    var created = 0;
+    final client = MockClient((req) async {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      if (req.method == 'POST') {
+        created++;
+        return http.Response(jsonEncode({'id': 'new-$created'}), 200);
+      }
+      return http.Response(jsonEncode({'files': []}), 200);
+    });
+    final s = GoogleDriveStore(_FixedAuth(), client: client);
+
+    await Future.wait([
+      s.createDirectory('/AbelNotes/.sync/'),
+      s.createDirectory('/AbelNotes/.sync/'),
+      s.createDirectory('/AbelNotes/'),
+    ]);
+
+    expect(created, 2, reason: '/AbelNotes/ once and .sync/ once');
+  });
+
+  test('a failed folder create does not wedge later attempts', () async {
+    var posts = 0;
+    final client = MockClient((req) async {
+      if (req.method == 'POST') {
+        posts++;
+        return posts == 1
+            ? http.Response(jsonEncode(notFound), 400)
+            : http.Response(jsonEncode({'id': 'ok'}), 200);
+      }
+      return http.Response(jsonEncode({'files': []}), 200);
+    });
+    final s = GoogleDriveStore(_FixedAuth(), client: client);
+
+    await expectLater(s.createDirectory('/Notes/'),
+        throwsA(isA<RemoteStoreException>()));
+    await s.createDirectory('/Notes/');
+    expect(posts, 2);
+  });
+
+  test('backslashes and quotes in a name are escaped in the query', () async {
+    fake.reply({'files': [{'id': 'folder-1'}]});
+    fake.reply({'files': [{'id': 'file-1'}]});
+    fake.reply({'id': 'file-1', 'md5Checksum': 'v'});
+
+    await store().getVersion(r"/AbelNotes/a\b'c.json");
+
+    expect(fake.seen[1].url.queryParameters['q'],
+        contains(r"name = 'a\\b\'c.json'"));
+  });
 }

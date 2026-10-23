@@ -31,7 +31,16 @@ class ConnectivityService {
     _pollTimer = null;
   }
 
-  Future<void> _check() async {
+  Future<void>? _inFlight;
+  bool _disposed = false;
+
+  // Overlapping callers (first check, timer, checkNow) share one probe.
+  Future<void> _check() => _inFlight ??= _probe().whenComplete(() {
+        _inFlight = null;
+      });
+
+  Future<void> _probe() async {
+    if (_disposed) return;
     final wasOnline = isOnline.value;
     try {
       final socket = await Socket.connect(
@@ -40,6 +49,7 @@ class ConnectivityService {
         timeout: const Duration(seconds: 5),
       );
       socket.destroy();
+      if (_disposed) return;
       isOnline.value = true;
 
       if (!wasOnline) {
@@ -47,6 +57,7 @@ class ConnectivityService {
         onReconnected?.call();
       }
     } catch (_) {
+      if (_disposed) return;
       isOnline.value = false;
       if (wasOnline) {
         debugPrint('[Connectivity] Gone offline.');
@@ -57,10 +68,11 @@ class ConnectivityService {
   /// One-shot connectivity check.
   Future<bool> checkNow() async {
     await _check();
-    return isOnline.value;
+    return !_disposed && isOnline.value;
   }
 
   void dispose() {
+    _disposed = true;
     stopMonitoring();
     isOnline.dispose();
   }

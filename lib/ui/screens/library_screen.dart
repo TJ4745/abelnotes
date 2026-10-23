@@ -650,17 +650,22 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
       type: FileType.custom,
       // Legacy spelling stays selectable: exports made before the rename.
       allowedExtensions: ['abelnote', 'ncnote', 'zip'],
+      allowMultiple: true,
       withData: true,
     );
     if (result == null || result.files.isEmpty) return;
-    final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) {
-      _toast(l10n.libImportCannotReadFile);
-      return;
+    final single = result.files.length == 1;
+    var imported = 0;
+    for (final file in result.files) {
+      final bytes = file.bytes;
+      if (bytes == null) {
+        _toast(l10n.libImportCannotReadFile);
+        continue;
+      }
+      if (!mounted) return;
+      if (await _importNcnoteBytes(bytes, file.name, announce: single)) imported++;
     }
-    if (!mounted) return;
-    await _importNcnoteBytes(bytes, file.name);
+    if (!single && imported > 0) _toast(l10n.libImportSuccessMany(imported));
   }
 
   /// A notebook handed to us by the OS (file association / command line).
@@ -759,7 +764,9 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
     }
   }
 
-  Future<void> _importNcnoteBytes(Uint8List bytes, String name) async {
+  /// Returns whether the notebook was imported. [announce] shows the
+  /// per-notebook success toast; a batch shows one summary instead.
+  Future<bool> _importNcnoteBytes(Uint8List bytes, String name, {bool announce = true}) async {
     final l10n = AppLocalizations.of(context);
 
     // Show progress
@@ -836,13 +843,14 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
         symbolLibraries: symbols,
       );
 
-      if (!mounted) return;
+      if (!mounted) return true;
       // ignore: use_build_context_synchronously
       Navigator.of(ctx).pop(); // dismiss spinner
       ref.read(notebookListProvider.notifier).refresh();
-      _toast(l10n.libImportSuccess(newTitle, pages.length));
+      if (announce) _toast(l10n.libImportSuccess(newTitle, pages.length));
+      return true;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return false;
       // ignore: use_build_context_synchronously
       Navigator.of(ctx).pop();
       // A corrupt archive is a normal thing for a user to hit — a truncated
@@ -850,9 +858,12 @@ class _LibraryScreenV2State extends ConsumerState<LibraryScreenV2>
       // it gets a sentence they can act on. The exception text stays in the
       // log for diagnosis.
       debugPrint('[Import] .ncnote import failed: $e');
-      _toast(e is CorruptedArchiveException
+      final msg = e is CorruptedArchiveException
           ? l10n.libImportCorruptedFile
-          : l10n.libErrorImport(e.toString()));
+          : l10n.libErrorImport(e.toString());
+      // Named, so in a batch it's clear which file it was.
+      _toast('$name — $msg');
+      return false;
     }
   }
 
