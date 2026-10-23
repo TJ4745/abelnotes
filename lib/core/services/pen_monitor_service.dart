@@ -79,9 +79,32 @@ class PenMonitorService {
   static final RegExp _connectedLine =
       RegExp(r'^(\S+) connected.*?(\d+)x(\d+)\+(-?\d+)\+(-?\d+)');
 
-  // Stylus / pen / wacom device, matched against `xinput list --name-only`.
+  // Name fallback for pens that show no pressure axis until in range.
   static final RegExp _penName =
       RegExp(r'stylus|pen|wacom', caseSensitive: false);
+
+  // "⎜   ↳ GAOMON Gaomon Tablet Pad   id=7   [slave  pointer  (2)]"
+  static final RegExp _slavePointerLine =
+      RegExp(r'↳\s*(.+?)\s+id=(\d+)\s+\[slave\s+pointer');
+
+  static final RegExp _pressureAxis = RegExp(r'Label:\s*Abs Pressure');
+
+  /// Slave pointer devices from `xinput list`, virtual XTEST ones excluded.
+  static List<({int id, String name})> parseSlavePointers(String xinputList) {
+    final out = <({int id, String name})>[];
+    for (final line in xinputList.split('\n')) {
+      final m = _slavePointerLine.firstMatch(line);
+      if (m == null) continue;
+      final name = m.group(1)!.trim();
+      if (name.contains('XTEST')) continue;
+      out.add((id: int.parse(m.group(2)!), name: name));
+    }
+    return out;
+  }
+
+  /// Whether `xinput list --long <id>` reports a pressure valuator.
+  static bool hasPressureAxis(String xinputLong) =>
+      _pressureAxis.hasMatch(xinputLong);
 
   /// Active monitors (connected + positioned). Throws [PenMonitorException]
   /// if xrandr is missing or returns nothing usable.
@@ -116,21 +139,36 @@ class PenMonitorService {
     return monitors;
   }
 
-  /// Name of the first stylus/pen/wacom device, or null if none is found.
-  Future<String?> findPenDevice() async {
+  /// Ids of the pointer devices that are pens: those with a pressure axis,
+  /// else those named like one. By id, not name: tablets often register a
+  /// keyboard device with the pen's name, which rejects the matrix
+  /// (BadMatch), and a name shared by two devices is refused as ambiguous.
+  Future<List<int>> findPenDevices() async {
+    final list = await _xinput(const ['list']);
+    if (list == null) return const [];
+    final pointers = parseSlavePointers(list);
+    final pens = <int>[];
+    for (final p in pointers) {
+      final long = await _xinput(['list', '--long', '${p.id}']);
+      if (long != null && hasPressureAxis(long)) pens.add(p.id);
+    }
+    if (pens.isEmpty) {
+      pens.addAll(
+          pointers.where((p) => _penName.hasMatch(p.name)).map((p) => p.id));
+    }
+    return pens;
+  }
+
+  /// stdout of `xinput args`, or null when it exits non-zero.
+  Future<String?> _xinput(List<String> args) async {
     final ProcessResult res;
     try {
-      res = await Process.run('xinput', const ['list', '--name-only']);
+      res = await Process.run('xinput', args);
     } on ProcessException catch (e) {
       throw PenMonitorException(PenMonitorError.toolMissing,
           tool: 'xinput', detail: e.message);
     }
-    if (res.exitCode != 0) return null;
-    for (final line in '${res.stdout}'.split('\n')) {
-      final name = line.trim();
-      if (name.isNotEmpty && _penName.hasMatch(name)) return name;
-    }
-    return null;
+    return res.exitCode == 0 ? '${res.stdout}' : null;
   }
 
   /// Constrain the pen to [monitor]. [allMonitors] is the full set returned
@@ -146,8 +184,8 @@ class PenMonitorService {
     PenMonitorInfo monitor,
     List<PenMonitorInfo> allMonitors,
   ) async {
-    final pen = await findPenDevice();
-    if (pen == null) {
+    final pens = await findPenDevices();
+    if (pens.isEmpty) {
       throw PenMonitorException(PenMonitorError.noPen);
     }
 
@@ -167,25 +205,28 @@ class PenMonitorService {
       0, 0, 1,
     ].map((v) => v.toStringAsFixed(6)).toList();
 
-    await _setMatrix(pen, matrix);
+    for (final id in pens) {
+      await _setMatrix(id, matrix);
+    }
   }
 
   /// Reset the pen to span the entire desktop again (identity matrix).
   Future<void> resetPen() async {
-    final pen = await findPenDevice();
-    if (pen == null) {
+    final pens = await findPenDevices();
+    if (pens.isEmpty) {
       throw PenMonitorException(PenMonitorError.noPen);
     }
-    await _setMatrix(
-        pen, const ['1', '0', '0', '0', '1', '0', '0', '0', '1']);
+    for (final id in pens) {
+      await _setMatrix(id, const ['1', '0', '0', '0', '1', '0', '0', '0', '1']);
+    }
   }
 
-  Future<void> _setMatrix(String pen, List<String> matrix) async {
+  Future<void> _setMatrix(int id, List<String> matrix) async {
     final ProcessResult res;
     try {
       res = await Process.run('xinput', [
         'set-prop',
-        pen,
+        '$id',
         'Coordinate Transformation Matrix',
         ...matrix,
       ]);
