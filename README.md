@@ -150,11 +150,7 @@ a Rust toolchain to rebuild it yourself with `native/build_onenote_bridge.sh`.
 
 ## Contributing
 
-Contributions are welcome. By submitting a contribution, you agree to license it under AGPL-3.0 and you sign off your commits under the [Developer Certificate of Origin](https://developercertificate.org/):
-
-```bash
-git commit -s -m "your message"
-```
+Contributions are welcome. Before your first pull request, read [CONTRIBUTING.md](CONTRIBUTING.md): contributors sign the [Contributor License Agreement](CLA.md) once (you keep your copyright; it lets the project publish AbelNotes in app stores too) and sign off their commits under the [Developer Certificate of Origin](https://developercertificate.org/) (`git commit -s`).
 
 Good first areas: testing experimental WebDAV backends against real servers (Seafile, Synology, generic WebDAV), import edge cases, and platform-specific polish.
 
