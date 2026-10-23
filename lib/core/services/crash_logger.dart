@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:abelnotes/config/app_config.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:abelnotes/core/platform/app_dirs.dart';
 
 /// File-backed crash / error logger for environments where a native crash
 /// reporter isn't available (iPad sideloaded builds that don't produce

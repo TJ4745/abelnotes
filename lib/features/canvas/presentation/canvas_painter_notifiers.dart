@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import 'dart:async';
-import 'dart:io' as io;
+import 'package:abelnotes/core/platform/io.dart' as io;
 import 'dart:math' show sqrt;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

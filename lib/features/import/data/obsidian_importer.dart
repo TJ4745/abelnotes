@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';

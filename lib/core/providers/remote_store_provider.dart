@@ -1,4 +1,4 @@
-import 'dart:io' as io;
+import 'package:abelnotes/core/platform/io.dart' as io;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';

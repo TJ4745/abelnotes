@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File, HandshakeException, SocketException;
+import 'package:abelnotes/core/platform/io.dart' show File, HandshakeException, SocketException;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

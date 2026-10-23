@@ -10,7 +10,8 @@ import 'package:uuid/uuid.dart';
 import 'package:abelnotes/config/app_config.dart';
 import 'package:abelnotes/features/canvas/data/text_paragraph_factory.dart';
 import 'package:abelnotes/features/import/data/import_models.dart';
-import 'package:abelnotes/features/import/data/onenote_ffi.dart';
+import 'package:abelnotes/features/import/data/onenote_ffi.dart'
+    if (dart.library.js_interop) 'package:abelnotes/features/import/data/onenote_ffi_web.dart';
 import 'package:abelnotes/shared/models/ncnote_format.dart';
 
 /// A parsed OneNote file, ready for [ImportService.registerNotebook]:

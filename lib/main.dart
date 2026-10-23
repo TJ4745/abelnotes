@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
+import 'package:abelnotes/core/platform/web_bootstrap.dart';
 import 'package:abelnotes/core/providers/app_mode_provider.dart';
 import 'package:abelnotes/core/providers/remote_store_provider.dart';
 import 'package:abelnotes/core/providers/app_settings_provider.dart';
@@ -44,7 +45,9 @@ void main(List<String> args) async {
       yield LicenseEntryWithLineBreaks(const ['Instrument Sans'], text);
     });
 
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    if (kIsWeb) {
+      await initWebStorage();
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }

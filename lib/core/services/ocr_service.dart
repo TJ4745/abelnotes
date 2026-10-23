@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';

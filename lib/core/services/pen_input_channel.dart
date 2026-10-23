@@ -1,5 +1,5 @@
 import 'dart:ffi';
-import 'dart:io' show File, Platform, RandomAccessFile;
+import 'package:abelnotes/core/platform/io.dart' show File, Platform, RandomAccessFile;
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';

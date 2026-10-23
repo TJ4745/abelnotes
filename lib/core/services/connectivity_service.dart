@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
+import 'package:abelnotes/core/platform/browser_online.dart'
+    if (dart.library.js_interop) 'package:abelnotes/core/platform/browser_online_web.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -43,12 +45,18 @@ class ConnectivityService {
     if (_disposed) return;
     final wasOnline = isOnline.value;
     try {
-      final socket = await Socket.connect(
-        serverHost,
-        serverPort,
-        timeout: const Duration(seconds: 5),
-      );
-      socket.destroy();
+      if (kIsWeb) {
+        // No raw sockets in a browser; its own online flag is the best
+        // signal available (real request failures are handled by sync).
+        if (!browserOnline) throw const SocketException('offline');
+      } else {
+        final socket = await Socket.connect(
+          serverHost,
+          serverPort,
+          timeout: const Duration(seconds: 5),
+        );
+        socket.destroy();
+      }
       if (_disposed) return;
       isOnline.value = true;
 

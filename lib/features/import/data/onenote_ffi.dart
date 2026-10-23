@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;

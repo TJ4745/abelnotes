@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';

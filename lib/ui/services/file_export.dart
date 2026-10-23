@@ -1,7 +1,8 @@
-import 'dart:io' as io;
+import 'package:abelnotes/core/platform/io.dart' as io;
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
@@ -27,6 +28,14 @@ Future<void> saveOrShareFile(
   required Uint8List data,
   required String mimeType,
 }) async {
+  if (kIsWeb) {
+    // Browser: the picker's saveFile hands the bytes to a download.
+    await FilePicker.platform.saveFile(
+      fileName: fileName,
+      bytes: data,
+    );
+    return;
+  }
   if (io.Platform.isIOS || io.Platform.isMacOS) {
     // Read the anchor before any await. iPad needs a non-zero rect for the
     // share-sheet popover or SharePlus throws, and MediaQuery must not be

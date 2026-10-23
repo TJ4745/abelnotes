@@ -1,4 +1,4 @@
-import 'dart:io' as io;
+import 'package:abelnotes/core/platform/io.dart' as io;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;

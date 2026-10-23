@@ -12,7 +12,7 @@
 //  same menu.
 // ═══════════════════════════════════════════════════════════════
 
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 import 'dart:math' as math;
 
 /// A connected, positioned monitor as reported by `xrandr --query`.

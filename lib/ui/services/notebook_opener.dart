@@ -1,5 +1,5 @@
 import 'dart:async' show TimeoutException;
-import 'dart:io' show SocketException;
+import 'package:abelnotes/core/platform/io.dart' show SocketException;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

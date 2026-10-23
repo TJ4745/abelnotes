@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' as io;
+import 'package:abelnotes/core/platform/io.dart' as io;
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' show sha256;
-import 'package:flutter/foundation.dart' show compute, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show compute, kIsWeb, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http_io;
 import 'package:xml/xml.dart';
@@ -122,7 +123,7 @@ class WebDavService implements RemoteStore {
   late final String _davUrl;
   late final Map<String, String> _authHeaders;
   late http.Client _client;
-  late io.HttpClient _innerHttpClient;
+  io.HttpClient? _innerHttpClient;
 
   /// Counter of consecutive request failures (timeout, IO error, null
   /// response where we expected content). When this exceeds
@@ -183,7 +184,9 @@ class WebDavService implements RemoteStore {
       // stroke JSON is 5-10× so this is a significant bandwidth saving
       // on slower links (Tailscale over cellular).  Dart's HttpClient
       // auto-decompresses gzip responses by default.
-      'Accept-Encoding': 'gzip',
+      // Browsers forbid scripts from setting this header (and already ask
+      // for compression on their own).
+      if (!kIsWeb) 'Accept-Encoding': 'gzip',
     };
 
     _buildClient();
@@ -199,13 +202,19 @@ class WebDavService implements RemoteStore {
   void _buildClient() {
     // Tear down any previous HttpClient (on reconnect / zombie recovery).
     try { _client.close(); } catch (_) {}
-    _innerHttpClient = io.HttpClient()
-      ..maxConnectionsPerHost = _maxConnectionsPerHost
-      ..idleTimeout = _idleTimeout
-      ..connectionTimeout = _connectTimeout
-      ..autoUncompress = true
-      ..badCertificateCallback = _badCertificateCallback;
-    _client = _GuardedClient(http_io.IOClient(_innerHttpClient), this);
+    if (kIsWeb) {
+      // The browser owns the connection pool and TLS (no cert pinning
+      // possible, and none needed: the browser's own trust store decides).
+      _client = _GuardedClient(http.Client(), this);
+    } else {
+      _innerHttpClient = io.HttpClient()
+        ..maxConnectionsPerHost = _maxConnectionsPerHost
+        ..idleTimeout = _idleTimeout
+        ..connectionTimeout = _connectTimeout
+        ..autoUncompress = true
+        ..badCertificateCallback = _badCertificateCallback;
+      _client = _GuardedClient(http_io.IOClient(_innerHttpClient!), this);
+    }
     _lastClientBuildAt = DateTime.now();
     _consecutiveFailures = 0;
   }
@@ -360,7 +369,7 @@ class WebDavService implements RemoteStore {
   /// connection-error handling in that case.
   static Future<String?> probeCertificateFingerprint(String serverUrl) async {
     final uri = Uri.parse(serverUrl);
-    if (uri.scheme != 'https') return null;
+    if (kIsWeb || uri.scheme != 'https') return null;
     final port = uri.hasPort ? uri.port : 443;
     io.SecureSocket? socket;
     try {

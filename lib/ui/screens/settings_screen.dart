@@ -1,7 +1,8 @@
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:abelnotes/config/app_config.dart';
@@ -25,7 +26,7 @@ import 'package:abelnotes/ui/theme/hw_theme.dart';
 import 'package:abelnotes/ui/primitives/hw_button.dart';
 import 'package:abelnotes/ui/primitives/scrollable_sheet.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:abelnotes/core/platform/app_dirs.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -1191,7 +1192,9 @@ class _StorageSection extends ConsumerWidget {
       if (!context.mounted) return;
       final fileName =
           'abelnotes_library_${DateTime.now().toIso8601String().split('T').first}.zip';
-      if (Platform.isIOS || Platform.isMacOS) {
+      if (kIsWeb) {
+        await FilePicker.platform.saveFile(fileName: fileName, bytes: Uint8List.fromList(zipBytes));
+      } else if (Platform.isIOS || Platform.isMacOS) {
         final dir = await getTemporaryDirectory();
         final tmp = File(p.join(dir.path, fileName));
         await tmp.writeAsBytes(zipBytes);

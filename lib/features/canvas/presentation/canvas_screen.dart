@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' as io;
+import 'package:abelnotes/core/platform/io.dart' as io;
 import 'package:abelnotes/config/app_config.dart';
 import 'package:abelnotes/core/services/desktop_window.dart';
 import 'package:abelnotes/core/services/nextcloud_share_service.dart' show ShareLink;
@@ -41,7 +41,8 @@ import 'package:abelnotes/shared/models/ncnote_format.dart';
 import 'package:abelnotes/shared/utils/html_text.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:abelnotes/core/services/crash_logger.dart';
-import 'package:abelnotes/core/services/pen_input_channel.dart';
+import 'package:abelnotes/core/services/pen_input_channel.dart'
+    if (dart.library.js_interop) 'package:abelnotes/core/services/pen_input_channel_web.dart';
 import 'package:abelnotes/core/services/pen_monitor_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:abelnotes/ui/services/file_export.dart';
@@ -7396,7 +7397,14 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
           files.add(XFile(f.path, mimeType: 'image/png'));
         }
         if (files.isNotEmpty) {
-          if (io.Platform.isIOS || io.Platform.isMacOS) {
+          if (kIsWeb) {
+            // Browser: one download per page.
+            for (final xf in files) {
+              final name = xf.path.split('/').last;
+              await FilePicker.platform
+                  .saveFile(fileName: name, bytes: await xf.readAsBytes());
+            }
+          } else if (io.Platform.isIOS || io.Platform.isMacOS) {
             await SharePlus.instance.share(
               ShareParams(
                 files: files,

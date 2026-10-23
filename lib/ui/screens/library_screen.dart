@@ -17,7 +17,7 @@ import 'package:abelnotes/core/providers/offline_providers.dart';
 import 'package:abelnotes/core/services/file_open_receiver.dart';
 import 'package:abelnotes/core/services/sync_service.dart';
 import 'package:abelnotes/core/services/sync_thrift.dart';
-import 'dart:io';
+import 'package:abelnotes/core/platform/io.dart';
 
 import 'package:abelnotes/features/auth/login_screen.dart';
 import 'package:abelnotes/features/import/data/import_models.dart';
