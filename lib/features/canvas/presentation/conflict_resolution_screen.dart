@@ -468,7 +468,7 @@ class _DiffSummaryBar extends StatelessWidget {
   _ElementCounts _countElements(PageData page) {
     var s = 0, i = 0, sh = 0, t = 0;
     for (final el in page.layers.content) {
-      el.map(stroke: (_) => s++, image: (_) => i++, shape: (_) => sh++, text: (_) => t++, math: (_) => 0);
+      el.map(unknown: (_) => 0, stroke: (_) => s++, image: (_) => i++, shape: (_) => sh++, text: (_) => t++, math: (_) => 0);
     }
     return _ElementCounts(s, i, sh, t);
   }

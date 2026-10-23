@@ -394,6 +394,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   /// Resume automatic remote pulls after a bulk operation.
   void endBulkOperation() => _bulkOperationInProgress = false;
 
+  @visibleForTesting
+  bool get bulkOperationInProgress => _bulkOperationInProgress;
+
   // ── Page filename helpers ────────────────────────────────────────────────
 
   /// Returns a safe, non-colliding fileName for a **new** page.
@@ -843,13 +846,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     required PageData local,
     required PageData remote,
   }) {
-    String idOf(ContentElement e) => e.map(
+    String idOf(ContentElement e) => e.map(unknown: (u) => u.id,
         stroke: (s) => s.id,
         text: (t) => t.id,
         image: (i) => i.id,
         shape: (s) => s.id,
         math: (m) => m.id);
-    int zOf(ContentElement e) => e.map(
+    int zOf(ContentElement e) => e.map(unknown: (u) => u.zIndex,
         stroke: (s) => s.zIndex,
         text: (t) => t.zIndex,
         image: (i) => i.zIndex,
@@ -1288,6 +1291,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // Bump the generation so any deferred teardown from a previous close
     // bails out instead of nulling the state we're about to populate.
     _openGeneration++;
+    // Safety net: a stuck bulk flag would block remote pulls for the session.
+    _bulkOperationInProgress = false;
     // Await so that state is set before the caller pushes CanvasScreen.
     // Without this, CanvasScreen briefly shows "Nessun notebook aperto"
     // (the null-state fallback) while SharedPreferences loads.
@@ -1694,7 +1699,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (page == null) return {};
     final refs = <String>{...page.assetReferences};
     for (final el in page.layers.content) {
-      el.map(
+      el.map(unknown: (_) {},
         stroke: (_) {},
         text:   (_) {},
         shape:  (_) {},
@@ -2543,6 +2548,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // memory across notebook switches.
     CanvasRenderEngine.disposeStaticCache();
     _disposed = true;
+    _bulkOperationInProgress = false;
+    _discardPendingErase();
     _isPulling = false;
     isPullingFromRemote.value = false;
     _pendingMetaCommitTimer?.cancel();
@@ -2790,9 +2797,17 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     _persistToolPrefs();
   }
 
+  void _discardPendingErase() {
+    _eraseFlushTimer?.cancel();
+    _eraseFlushTimer = null;
+    _pendingErasePage = null;
+    _pendingEraseFileName = null;
+  }
+
   /// Cancel the current stroke without committing (e.g. when pinch-to-zoom starts)
   void cancelStroke() {
     if (state == null) return;
+    _discardPendingErase();
     _eraserUndoPushed = false;
     _eraseGestureStart = null;
     state = state!.copyWith(
@@ -3788,6 +3803,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   /// the throttle Timer in [_eraseAt] or directly on pointer-up by
   /// [endStroke] so the final erase state always lands.
   void _flushPendingErase() {
+    if (_disposed) return;
     _eraseFlushTimer?.cancel();
     _eraseFlushTimer = null;
     final pending = _pendingErasePage;
@@ -3938,7 +3954,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       }
 
       if (isSelected) {
-        final id = element.map(
+        final id = element.map(unknown: (u) => u.id,
           stroke: (e) => e.id, text: (e) => e.id,
           image: (e) => e.id, shape: (e) => e.id,
           math: (e) => e.id,
@@ -3992,7 +4008,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       return Rect.fromLTRB(xs.reduce(min), ys.reduce(min), xs.reduce(max), ys.reduce(max));
     }
 
-    return element.map(
+    return element.map(unknown: (_) => null,
       stroke: (e) {
         if (e.data.points.isEmpty) return null;
         final xs = e.data.points.map((p) => p.x);
@@ -4034,7 +4050,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final center = sel.bounds.center;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
@@ -4120,7 +4136,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final center = sel.bounds.center;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
@@ -4153,7 +4169,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // Recalculate bounds from actual transformed element positions
     Rect? newBounds;
     for (final element in updatedContent) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
@@ -4202,13 +4218,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     double reflectY(double y) => horizontal ? y : 2 * center.dy - y;
 
     final updatedContent = postPage.layers.content.map((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
       );
       if (!postSel.selectedIds.contains(id)) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => ContentElement.stroke(
           id: e.id, zIndex: e.zIndex,
           data: StrokeData(
@@ -4282,7 +4298,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // Recompute selection bounds from mirrored elements.
     Rect? newBounds;
     for (final element in updatedContent) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
@@ -4314,7 +4330,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       return Offset(center.dx + dx * cosA - dy * sinA, center.dy + dx * sinA + dy * cosA);
     }
 
-    return element.map(
+    return element.map(unknown: (u) => u,
       stroke: (e) => ContentElement.stroke(
         id: e.id, zIndex: e.zIndex,
         data: StrokeData(
@@ -4404,7 +4420,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final undoStack = _pushUndo(s, fileName, page);
 
     final filteredContent = page.layers.content.where((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
@@ -4446,13 +4462,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final undoStack = _pushUndo(s, fileName, page);
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
       );
       if (!sel.selectedIds.contains(id)) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e.copyWith(data: e.data.copyWith(color: newColor)),
         // Span colours would otherwise override the new base colour.
         text: (e) => e.copyWith(
@@ -4506,13 +4522,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     }
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id, text: (e) => e.id,
         image: (e) => e.id, shape: (e) => e.id,
         math: (e) => e.id,
       );
       if (!sel.selectedIds.contains(id)) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e.copyWith(data: e.data.copyWith(baseWidth: newWidth)),
         text: (e) => e, // text has no stroke width
         image: (e) => e, // images don't have a stroke width
@@ -4627,7 +4643,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   static List<UndoEntry> rebaseHistoryOnMerge(List<UndoEntry> stack,
       Map<String, PageData> before, Map<String, PageData> after) {
     if (stack.isEmpty) return stack;
-    String idOf(ContentElement e) => e.map(
+    String idOf(ContentElement e) => e.map(unknown: (u) => u.id,
         stroke: (s) => s.id,
         text: (t) => t.id,
         image: (i) => i.id,
@@ -4820,7 +4836,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     );
 
     // Insert after current page position (not always at end)
-    final insertIndex = s.currentPageIndex + 1;
+    // Clamp: a stale currentPageIndex (remote merge) must not make insert() throw.
+    final insertIndex = (s.currentPageIndex + 1).clamp(0, s.document.pages.length);
     final pageList = List<PageEntry>.from(s.document.pages)..insert(insertIndex, newEntry);
     // Renumber: inserting mid-document would otherwise leave pageNumber
     // out of sync with position (search results sort on it).
@@ -5043,7 +5060,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final chapter = Chapter(id: chapterId, title: title, pageIds: [pageId]);
 
     // Insert the new page after current position
-    final insertIndex = s.currentPageIndex + 1;
+    final insertIndex = (s.currentPageIndex + 1).clamp(0, s.document.pages.length);
     final pageList = List<PageEntry>.from(s.document.pages)..insert(insertIndex, newEntry);
     final updatedDoc = s.document.copyWith(pages: pageList);
 
@@ -5441,7 +5458,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     updatedPages[fileName] = updatedPage;
 
     final ids = placed
-        .map((e) => e.map(
+        .map((e) => e.map(unknown: (u) => u.id,
             stroke: (x) => x.id, text: (x) => x.id, image: (x) => x.id,
             shape: (x) => x.id, math: (x) => x.id))
         .toList();
@@ -5580,7 +5597,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   int _nextZIndex(PageData page) {
     int maxZ = -1;
     for (final e in page.layers.content) {
-      final z = e.map(stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex);
+      final z = e.map(unknown: (u) => u.zIndex, stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex);
       if (z > maxZ) maxZ = z;
     }
     return maxZ + 1;
@@ -5600,7 +5617,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   }
 
   ContentElement _translateElement(ContentElement element, Offset offset) {
-    return element.map(
+    return element.map(unknown: (u) => u,
       stroke: (e) => ContentElement.stroke(
         id: e.id, zIndex: e.zIndex,
         data: StrokeData(
@@ -5648,7 +5665,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   }
 
   Rect _elementBounds(ContentElement element) {
-    return element.map(
+    return element.map(unknown: (_) => Rect.zero,
       stroke: (e) {
         if (e.data.points.isEmpty) return Rect.zero;
         double mnX = e.data.points.first.x, mxX = mnX, mnY = e.data.points.first.y, mxY = mnY;
@@ -5666,7 +5683,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   }
 
   ContentElement _scaleElement(ContentElement element, Offset center, double scale) {
-    return element.map(
+    return element.map(unknown: (u) => u,
       stroke: (e) => ContentElement.stroke(
         id: e.id, zIndex: e.zIndex,
         data: StrokeData(
@@ -5756,7 +5773,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final undoStack = s.undoStack;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
       return _translateElement(element, delta);
     }).toList();
@@ -5884,9 +5901,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final fileName = s.currentPageFileName;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e as ContentElement, // can't resize strokes this way
         // Text resize from the smart-resize flow goes through
         // resizeTextElement; this arm is the generic fallback. copyWith
@@ -5982,9 +5999,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final fileName = s.currentPageFileName;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e as ContentElement,
         text: (e) => e as ContentElement,
         image: (e) => ContentElement.image(
@@ -6039,7 +6056,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final undoStack = _pushUndo(s, fileName, page);
 
     final filteredContent = page.layers.content.where((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       return id != elementId;
     }).toList();
 
@@ -6069,13 +6086,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
 
     final content = List<ContentElement>.from(page.layers.content);
     final idx = content.indexWhere((e) =>
-        e.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id) == elementId);
+        e.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id) == elementId);
     if (idx < 0 || idx == content.length - 1) return;
     final element = content.removeAt(idx);
     // Give it a zIndex higher than all others
     final maxZ = content.fold<int>(0, (m, e) =>
-        max(m, e.map(stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex)));
-    final updated = element.map(
+        max(m, e.map(unknown: (u) => u.zIndex, stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex)));
+    final updated = element.map(unknown: (u) => u.copyWith(zIndex: maxZ + 1),
       stroke: (e) => ContentElement.stroke(id: e.id, zIndex: maxZ + 1, data: e.data),
       text: (e) => ContentElement.text(id: e.id, zIndex: maxZ + 1, data: e.data),
       image: (e) => ContentElement.image(id: e.id, zIndex: maxZ + 1, data: e.data),
@@ -6097,13 +6114,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
 
     final content = List<ContentElement>.from(page.layers.content);
     final idx = content.indexWhere((e) =>
-        e.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id) == elementId);
+        e.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id) == elementId);
     if (idx <= 0) return;
     final element = content.removeAt(idx);
     // Give it a zIndex lower than all others
     final minZ = content.fold<int>(999999, (m, e) =>
-        min(m, e.map(stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex)));
-    final updated = element.map(
+        min(m, e.map(unknown: (u) => u.zIndex, stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex)));
+    final updated = element.map(unknown: (u) => u.copyWith(zIndex: minZ - 1),
       stroke: (e) => ContentElement.stroke(id: e.id, zIndex: minZ - 1, data: e.data),
       text: (e) => ContentElement.text(id: e.id, zIndex: minZ - 1, data: e.data),
       image: (e) => ContentElement.image(id: e.id, zIndex: minZ - 1, data: e.data),
@@ -6123,9 +6140,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final fileName = s.currentPageFileName;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e as ContentElement,
         text: (e) => e as ContentElement,
         image: (e) => ContentElement.image(
@@ -6149,9 +6166,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final fileName = s.currentPageFileName;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e as ContentElement,
         text: (e) => e as ContentElement,
         image: (e) => ContentElement.image(
@@ -6174,9 +6191,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final fileName = s.currentPageFileName;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e as ContentElement,
         text: (e) => e as ContentElement,
         image: (e) => ContentElement.image(
@@ -6196,9 +6213,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final page = state!.currentPage;
     if (page == null) return false;
     for (final el in page.layers.content) {
-      final id = el.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = el.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) continue;
-      return el.map(
+      return el.map(unknown: (_) => false,
         stroke: (_) => false, text: (_) => false,
         image: (e) => e.data.locked,
         shape: (_) => false,
@@ -6287,7 +6304,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       undoStack: undoStack,
       redoStack: [],
       isDirty: true,
-      selectedElementId: newElement.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id),
+      selectedElementId: newElement.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id),
       currentTool: CanvasTool.lasso,
     );
     return assetId;
@@ -6654,7 +6671,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // Find the image element
     ImageData? imgData;
     for (final el in page.layers.content) {
-      el.map(
+      el.map(unknown: (_) {},
         stroke: (_) {},
         text: (_) {},
         image: (i) { if (i.id == elementId) imgData = i.data; },
@@ -6719,9 +6736,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final newY = imgData!.y + imgData!.height * normalizedCrop.top;
 
     final updatedContent = page.layers.content.map((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       if (id != elementId) return element;
-      return element.map(
+      return element.map(unknown: (u) => u,
         stroke: (e) => e as ContentElement,
         text: (e) => e as ContentElement,
         image: (e) => ContentElement.image(
@@ -6804,7 +6821,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (page == null) return;
 
     final copied = page.layers.content.where((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       return sel.selectedIds.contains(id);
     }).toList();
 
@@ -6829,7 +6846,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final page = state!.currentPage;
     if (page == null) return;
     final element = page.layers.content.where((e) {
-      final id = e.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = e.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       return id == elementId;
     }).firstOrNull;
     if (element == null) return;
@@ -6873,7 +6890,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       newIds.add(newId);
       final translated = _translateElement(element, pasteOffset);
       final z = baseZ + idx;
-      newElements.add(translated.map(
+      newElements.add(translated.map(unknown: (u) => u.copyWith(id: newId, zIndex: z),
         stroke: (e) => ContentElement.stroke(id: newId, zIndex: z, data: e.data),
         text: (e) => ContentElement.text(id: newId, zIndex: z, data: e.data),
         image: (e) => ContentElement.image(id: newId, zIndex: z, data: e.data),
@@ -6962,7 +6979,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
 
     final fileName = s.currentPageFileName;
     final originals = page.layers.content.where((element) {
-      final id = element.map(
+      final id = element.map(unknown: (u) => u.id,
         stroke: (e) => e.id,
         text: (e) => e.id,
         image: (e) => e.id,
@@ -6997,7 +7014,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       final newId = const Uuid().v4();
       newIds.add(newId);
       final z = baseZ + idx;
-      newElements.add(translated.map(
+      newElements.add(translated.map(unknown: (u) => u.copyWith(id: newId, zIndex: z),
         stroke: (e) => ContentElement.stroke(id: newId, zIndex: z, data: e.data),
         text: (e) => ContentElement.text(id: newId, zIndex: z, data: e.data),
         image: (e) => ContentElement.image(id: newId, zIndex: z, data: e.data),
@@ -7043,7 +7060,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (page == null) return;
 
     final original = page.layers.content.where((e) {
-      final id = e.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = e.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       return id == elementId;
     }).firstOrNull;
     if (original == null) return;
@@ -7196,7 +7213,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (page == null) return;
 
     final elements = page.layers.content.where((element) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       return sel.selectedIds.contains(id);
     }).toList();
 
@@ -7231,7 +7248,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (page == null) return;
 
     final element = page.layers.content.where((e) {
-      final id = e.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = e.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
       return id == elementId;
     }).firstOrNull;
     if (element == null) return;
@@ -7361,7 +7378,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       // addImageElement) instead of deselecting — a symbol is usually
       // dropped in roughly the right spot and then nudged/resized, which
       // needs it selected immediately rather than forcing a manual re-tap.
-      selectedElementId: imgElement.map(
+      selectedElementId: imgElement.map(unknown: (u) => u.id,
           stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id,
           shape: (e) => e.id, math: (e) => e.id),
       clearLasso: true,
@@ -7402,7 +7419,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     canvas.translate(-paddedBounds.left, -paddedBounds.top);
 
     for (final element in symbol.elements) {
-      element.map(
+      element.map(unknown: (_) {},
         stroke: (e) => _paintStrokeSymbol(canvas, e.data),
         text: (e) => _paintTextSymbol(canvas, e.data),
         image: (e) => _paintImageSymbol(canvas, e.data),
@@ -8065,7 +8082,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
         background: sourcePage.layers.background,
         content: sourcePage.layers.content.map((e) {
           final newId = uuid.v4();
-          return e.map(
+          return e.map(unknown: (u) => u.copyWith(id: newId),
             stroke: (e) => ContentElement.stroke(id: newId, zIndex: e.zIndex, data: e.data),
             text: (e) => ContentElement.text(id: newId, zIndex: e.zIndex, data: e.data),
             image: (e) => ContentElement.image(id: newId, zIndex: e.zIndex, data: e.data),
@@ -8148,7 +8165,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (validSet.isEmpty) return;
     final valid = validSet.toList()..sort();
 
-    final currentPageId = s.document.pages[s.currentPageIndex].pageId;
+    final currentPageId = s.document.pages[
+        s.currentPageIndex.clamp(0, s.document.pages.length - 1)].pageId;
 
     final moved = [for (final i in valid) s.document.pages[i]];
     final remaining = [
@@ -8209,12 +8227,14 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final page = state!.currentPage;
     if (page == null || page.layers.content.isEmpty) return;
 
-    final allIds = page.layers.content.map((e) {
-      return e.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+    // UnknownElement is never painted: selecting it would let delete/cut/move destroy it unseen.
+    final known = page.layers.content.where((e) => e is! UnknownElement).toList();
+    final allIds = known.map((e) {
+      return e.map(unknown: (u) => u.id, stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
     }).toList();
 
     Rect? bounds;
-    for (final element in page.layers.content) {
+    for (final element in known) {
       final b = _getElementBounds(element);
       if (b != null) bounds = bounds == null ? b : bounds.expandToInclude(b);
     }
@@ -9121,6 +9141,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     _pullTimer = null;
     _pendingMetaCommitTimer?.cancel();
     _pendingMetaCommitTimer = null;
+    _discardPendingErase();
     _disposed = true;
     // Release ui.Image textures before super.dispose() tears down the
     // Riverpod state (which would otherwise drop references without
@@ -9318,6 +9339,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       final pullNotebookId = state!.metadata.id;
       // Nothing to pull for a notebook that was never meant to leave.
       if (await _isLocalOnly(pullNotebookId)) return;
+      // closeNotebook may have nulled state (or switched notebooks) during the await.
+      if (state == null || state!.metadata.id != pullNotebookId) return;
       final s0 = state!;
       unawaited(CrashLogger.append(
         '[Pull] start nb=${pullNotebookId.substring(0, 8)} '
@@ -10248,7 +10271,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       }
       // Also scan image elements directly (assetReferences may be out of date)
       for (final el in page.layers.content) {
-        el.map(
+        el.map(unknown: (_) {},
           stroke: (_) {},
           text: (_) {},
           shape: (_) {},
@@ -10996,6 +11019,10 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
             : s.currentPageIndex.clamp(0, finalDoc.pages.length - 1);
       }
     }
+    // A stale index (outer `if` skipped) must still land inside the merged range.
+    newPageIndex = finalDoc.pages.isEmpty
+        ? 0
+        : newPageIndex.clamp(0, finalDoc.pages.length - 1);
     // Land on an index whose page data actually exists ("Nessuna pagina"
     // guard) — walk forward from the resolved index.
     for (int attempt = 0; attempt < finalDoc.pages.length; attempt++) {
@@ -11402,7 +11429,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     if (page == null) return (0, 0, 0, 0);
     var strokes = 0, images = 0, shapes = 0, texts = 0;
     for (final el in page.layers.content) {
-      el.map(
+      el.map(unknown: (_) => 0,
         stroke: (_) => strokes++,
         image: (_) => images++,
         shape: (_) => shapes++,

@@ -3529,7 +3529,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       // Strokes and shapes hit-test against real geometry (a diagonal
       // line's bbox is mostly empty space); solid rects keep bbox.
       var geometryHit = false;
-      element.map(
+      element.map(unknown: (u) => u,
         stroke: (s) {
           if (s.data.points.isEmpty) return;
           if (_strokeHit(s.data, pagePos, max(8.0, s.data.baseWidth))) {
@@ -3577,7 +3577,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       Rect? bounds;
       String? id;
       var geometryHit = false;
-      element.map(
+      element.map(unknown: (u) => u,
         stroke: (_) {},
         text: (t) {
           if (!imagesOnly) {
@@ -3615,9 +3615,14 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final page = state.currentPage;
     if (page == null) return null;
     for (final element in page.layers.content) {
-      final id = element.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+      final id = element.map(unknown: (u) => u.id,
+          stroke: (e) => e.id,
+          text: (e) => e.id,
+          image: (e) => e.id,
+          shape: (e) => e.id,
+          math: (e) => e.id);
       if (id != state.selectedElementId) continue;
-      return element.map(
+      return element.map(unknown: (_) => null,
         stroke: (e) {
           if (e.data.points.isEmpty) return null;
           final xs = e.data.points.map((p) => p.x);
@@ -4295,6 +4300,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       }
 
       notifier.endBulkOperation();
+      bulkStarted = false;
       // Decode the current page's images now that bulk import is done.
       // During import we skipped decode to keep GPU pressure bounded;
       // the user is on the last imported page and expects to see it
@@ -4317,7 +4323,6 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         );
       }
     } catch (e) {
-      if (bulkStarted) notifier.endBulkOperation();
       debugPrint('[Canvas] PDF import failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
@@ -4326,6 +4331,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         );
       }
     } finally {
+      // Every exit path (incl. the `!mounted` returns) must re-enable remote pulls.
+      if (bulkStarted) notifier.endBulkOperation();
       // Release PDFium's parse of the source PDF. Runs on every exit path
       // (including the `if (!mounted) return` guards inside the loop).
       await doc.dispose();
@@ -5895,14 +5902,19 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (page == null) return [];
 
     final element = page.layers.content.where((e) {
-      final id = e.map(stroke: (s) => s.id, text: (t) => t.id, image: (i) => i.id, shape: (s) => s.id, math: (e) => e.id);
+      final id = e.map(unknown: (u) => u.id,
+          stroke: (s) => s.id,
+          text: (t) => t.id,
+          image: (i) => i.id,
+          shape: (s) => s.id,
+          math: (e) => e.id);
       return id == state.selectedElementId;
     }).firstOrNull;
     if (element == null) return [];
 
     Rect? pageBounds;
     double rotation = 0;
-    element.map(
+    element.map(unknown: (u) => u,
       stroke: (_) {},
       text: (t) => pageBounds = Rect.fromLTWH(t.data.x, t.data.y, t.data.width, t.data.height),
       image: (i) {
@@ -5946,7 +5958,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final screenRect = Rect.fromPoints(screenTL, screenBR);
 
     // Determine if the selected element is an image (to show crop button)
-    final isImage = element.map(
+    final isImage = element.map(unknown: (_) => false,
       stroke: (_) => false,
       text: (_) => false,
       image: (_) => true,
@@ -5954,7 +5966,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       math: (_) => false,
     );
 
-    final isLocked = element.map(
+    final isLocked = element.map(unknown: (_) => false,
       stroke: (_) => false,
       text: (_) => false,
       image: (e) => e.data.locked,
@@ -5962,7 +5974,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       math: (_) => false,
     );
 
-    final hasComment = element.map(
+    final hasComment = element.map(unknown: (_) => false,
       stroke: (_) => false,
       text: (_) => false,
       image: (e) => e.data.comment != null && e.data.comment!.isNotEmpty,
@@ -5970,7 +5982,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       math: (_) => false,
     );
 
-    final isFlipped = element.map(
+    final isFlipped = element.map(unknown: (_) => false,
       stroke: (_) => false,
       text: (_) => false,
       image: (e) => e.data.flipHorizontal,
@@ -5981,7 +5993,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // Text boxes resize like GoodNotes/Keynote: corners scale the font,
     // sides change the wrap width, and height auto-fits (so the top/bottom
     // handles are hidden). Images/shapes/math keep free-deform corners.
-    final isText = element.map(
+    final isText = element.map(unknown: (_) => false,
       stroke: (_) => false,
       text: (_) => true,
       image: (_) => false,
@@ -6112,9 +6124,14 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final pg = st.currentPage;
     if (pg != null) {
       for (final el in pg.layers.content) {
-        final id = el.map(stroke: (e) => e.id, text: (e) => e.id, image: (e) => e.id, shape: (e) => e.id, math: (e) => e.id);
+        final id = el.map(unknown: (u) => u.id,
+            stroke: (e) => e.id,
+            text: (e) => e.id,
+            image: (e) => e.id,
+            shape: (e) => e.id,
+            math: (e) => e.id);
         if (id == elementId) {
-          el.map(
+          el.map(unknown: (_) {},
             stroke: (_) {},
             text: (_) {},
             image: (e) => currentComment = e.data.comment,
@@ -6172,12 +6189,19 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (page == null) return;
 
     final element = page.layers.content.where((e) {
-      return e.map(stroke: (s) => s.id, text: (t) => t.id, image: (i) => i.id, shape: (s) => s.id, math: (e) => e.id) == elementId;
+      return e.map(unknown: (u) => u.id,
+              stroke: (s) => s.id,
+              text: (t) => t.id,
+              image: (i) => i.id,
+              shape: (s) => s.id,
+              math: (e) => e.id) ==
+          elementId;
     }).firstOrNull;
     if (element == null) return;
 
     ImageData? imageData;
-    element.map(stroke: (_) {}, text: (_) {}, image: (i) => imageData = i.data, shape: (_) {}, math: (_) {});
+    element.map(unknown: (_) {},
+        stroke: (_) {}, text: (_) {}, image: (i) => imageData = i.data, shape: (_) {}, math: (_) {});
     if (imageData == null) return;
     final imgData = imageData!;
 
@@ -6249,16 +6273,25 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                 if (sel != null && sel.selectedIds.length == 1) {
                   final page = state.currentPage;
                   final id = sel.selectedIds.first;
-                  final el = page?.layers.content.where((e) => e.map(
-                    stroke: (s) => s.id, text: (t) => t.id,
-                    image: (i) => i.id, shape: (s) => s.id,
-                    math: (e) => e.id,
-                  ) == id).firstOrNull;
-                  final isImg = el?.map(
-                    stroke: (_) => false, text: (_) => false,
-                    image: (_) => true, shape: (_) => false,
-                    math: (_) => false,
-                  ) ?? false;
+                  final el = page?.layers.content
+                      .where((e) =>
+                          e.map(unknown: (u) => u.id,
+                            stroke: (s) => s.id,
+                            text: (t) => t.id,
+                            image: (i) => i.id,
+                            shape: (s) => s.id,
+                            math: (e) => e.id,
+                          ) ==
+                          id)
+                      .firstOrNull;
+                  final isImg = el?.map(unknown: (_) => false,
+                        stroke: (_) => false,
+                        text: (_) => false,
+                        image: (_) => true,
+                        shape: (_) => false,
+                        math: (_) => false,
+                      ) ??
+                      false;
                   if (isImg) _copyImageElementToSystemClipboard(id);
                 }
                 _toast(AppLocalizations.of(context).csSelectionCopied);
@@ -6387,13 +6420,15 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final page = state.currentPage;
     if (sel == null || page == null) return null;
     for (final element in page.layers.content) {
-      final id = element.map(
-        stroke: (e) => e.id, text: (e) => e.id,
-        image: (e) => e.id, shape: (e) => e.id,
+      final id = element.map(unknown: (u) => u.id,
+        stroke: (e) => e.id,
+        text: (e) => e.id,
+        image: (e) => e.id,
+        shape: (e) => e.id,
         math: (e) => e.id,
       );
       if (!sel.selectedIds.contains(id)) continue;
-      final width = element.map(
+      final width = element.map(unknown: (_) => -1.0,
         stroke: (e) => e.data.baseWidth,
         text: (_) => -1.0,
         image: (_) => -1.0,
@@ -6708,7 +6743,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final page = state.currentPage;
     if (page == null) return;
     final element = page.layers.content.where((e) {
-      final id = e.map(
+      final id = e.map(unknown: (u) => u.id,
           stroke: (s) => s.id,
           text: (t) => t.id,
           image: (i) => i.id,
@@ -6718,7 +6753,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     }).firstOrNull;
     if (element == null) return;
     Rect? origBounds;
-    element.map(
+    element.map(unknown: (u) => u,
       stroke: (_) {},
       text: (t) =>
           origBounds = Rect.fromLTWH(t.data.x, t.data.y, t.data.width, t.data.height),
@@ -6740,9 +6775,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     );
     final newBounds = scaledRect.translate(dragOffset.dx, dragOffset.dy);
 
-    final isTextEl = element.map(
-      stroke: (_) => false, text: (_) => true, image: (_) => false,
-      shape: (_) => false, math: (_) => false,
+    final isTextEl = element.map(unknown: (_) => false,
+      stroke: (_) => false,
+      text: (_) => true,
+      image: (_) => false,
+      shape: (_) => false,
+      math: (_) => false,
     );
 
     // Single Riverpod update for the whole gesture.
@@ -7771,9 +7809,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       // Build a temporary page containing only the selected elements,
       // translated so the selection bounds start at (0,0).
       final selectedElements = page.layers.content
-          .where((e) => sel.selectedIds.contains(
-                e.map(stroke: (s) => s.id, text: (t) => t.id,
-                    image: (i) => i.id, shape: (s) => s.id, math: (e) => e.id)))
+          .where((e) => sel.selectedIds.contains(e.map(unknown: (u) => u.id,
+              stroke: (s) => s.id,
+              text: (t) => t.id,
+              image: (i) => i.id,
+              shape: (s) => s.id,
+              math: (e) => e.id)))
           .toList();
 
       final croppedPage = page.copyWith(
@@ -7848,8 +7889,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final page = state?.currentPage;
     if (page == null) return false;
     for (final e in page.layers.content) {
-      final id =
-          e.map(stroke: (s) => s.id, text: (t) => t.id, image: (i) => i.id, shape: (s) => s.id, math: (e) => e.id);
+      final id = e.map(unknown: (u) => u.id,
+          stroke: (s) => s.id,
+          text: (t) => t.id,
+          image: (i) => i.id,
+          shape: (s) => s.id,
+          math: (e) => e.id);
       if (id == elementId) {
         return e.maybeMap(image: (_) => true, orElse: () => false);
       }
@@ -7863,13 +7908,20 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final page = state.currentPage;
     if (page == null) return;
     final element = page.layers.content.where((e) {
-      return e.map(stroke: (s) => s.id, text: (t) => t.id, image: (i) => i.id, shape: (s) => s.id, math: (e) => e.id) == elementId;
+      return e.map(unknown: (u) => u.id,
+              stroke: (s) => s.id,
+              text: (t) => t.id,
+              image: (i) => i.id,
+              shape: (s) => s.id,
+              math: (e) => e.id) ==
+          elementId;
     }).firstOrNull;
     if (element == null) return;
 
     ImageData? imageData;
-    element.map(
-      stroke: (_) {}, text: (_) {},
+    element.map(unknown: (_) {},
+      stroke: (_) {},
+      text: (_) {},
       image: (i) => imageData = i.data,
       shape: (_) {},
       math: (_) {},

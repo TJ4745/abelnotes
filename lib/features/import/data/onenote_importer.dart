@@ -240,7 +240,7 @@ class OneNoteImporter {
     }
 
     for (final el in elements) {
-      el.map(
+      el.map(unknown: (u) => u,
         text: (t) => grow(t.data.x, t.data.y, t.data.x + t.data.width,
             t.data.y + t.data.height),
         image: (i) => grow(i.data.x, i.data.y, i.data.x + i.data.width,
@@ -268,7 +268,7 @@ class OneNoteImporter {
 
     return [
       for (final el in elements)
-        el.map(
+        el.map(unknown: (u) => u,
           text: (t) => t.copyWith(
               data: t.data.copyWith(x: t.data.x + dx, y: t.data.y + dy)),
           image: (i) => i.copyWith(

@@ -104,7 +104,7 @@ class PageData with _$PageData {
 class RenderingLayers with _$RenderingLayers {
   const factory RenderingLayers({
     @Default(BackgroundLayer()) BackgroundLayer background,
-    @Default([]) List<ContentElement> content,
+    @ContentListConverter() @Default([]) List<ContentElement> content,
   }) = _RenderingLayers;
 
   factory RenderingLayers.fromJson(Map<String, dynamic> json) =>
@@ -162,8 +162,69 @@ class ContentElement with _$ContentElement {
     required MathData data,
   }) = MathElement;
 
+  /// Element type this build doesn't know (written by a newer app version).
+  /// Kept verbatim so saving the page doesn't destroy it; never painted.
+  const factory ContentElement.unknown({
+    required String id,
+    required int zIndex,
+    required Map<String, dynamic> raw,
+  }) = UnknownElement;
+
   factory ContentElement.fromJson(Map<String, dynamic> json) =>
       _$ContentElementFromJson(json);
+}
+
+const _knownElementTypes = {
+  'stroke', 'text', 'image', 'shape', 'math', 'unknown',
+};
+
+/// Page content list that survives element types from newer app versions.
+class ContentListConverter
+    implements JsonConverter<List<ContentElement>, List<dynamic>> {
+  const ContentListConverter();
+
+  // Marks a list entry that was not a Map, kept verbatim in `raw`.
+  static const _nonMapKey = '\u0000nonMapEntry';
+
+  @override
+  List<ContentElement> fromJson(List<dynamic> json) => [
+        for (var i = 0; i < json.length; i++) _element(i, json[i]),
+      ];
+
+  // Id-less unknowns get a synthetic id from their index, never written back.
+  static ContentElement _element(int index, dynamic e) {
+    if (e is! Map) {
+      return ContentElement.unknown(
+          id: 'unknown#$index', zIndex: 0, raw: {_nonMapKey: e});
+    }
+    final map = Map<String, dynamic>.from(e);
+    if (_knownElementTypes.contains(map['type'])) {
+      return ContentElement.fromJson(map);
+    }
+    final id = map['id'];
+    final z = map['zIndex'];
+    return ContentElement.unknown(
+      id: id is String ? id : 'unknown#$index',
+      zIndex: z is num ? z.toInt() : 0,
+      raw: map,
+    );
+  }
+
+  @override
+  List<dynamic> toJson(List<ContentElement> list) => [
+        for (final e in list)
+          if (e is UnknownElement)
+            if (e.raw.containsKey(_nonMapKey))
+              e.raw[_nonMapKey]
+            else
+              {
+                ...e.raw,
+                if (e.raw['id'] is String) 'id': e.id,
+                if (e.raw['zIndex'] is num || e.zIndex != 0) 'zIndex': e.zIndex,
+              }
+          else
+            e.toJson(),
+      ];
 }
 
 // ── Stroke Data ──

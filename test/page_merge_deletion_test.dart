@@ -24,7 +24,7 @@ PageData page(List<String> ids) => PageData(
     );
 
 List<String> idsOf(PageData? p) => [
-      for (final e in p!.layers.content) e.map(
+      for (final e in p!.layers.content) e.map(unknown: (u) => u.id,
           stroke: (s) => s.id,
           text: (t) => t.id,
           image: (i) => i.id,

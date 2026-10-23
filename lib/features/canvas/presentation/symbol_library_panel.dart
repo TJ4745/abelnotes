@@ -75,7 +75,7 @@ class _SymbolLibraryPanelState extends ConsumerState<SymbolLibraryPanel> {
     canvas.scale(scale);
 
     for (final element in symbol.elements) {
-      element.map(
+      element.map(unknown: (_) {},
         stroke: (e) {
           if (e.data.points.length < 2) return;
           final paint = Paint()

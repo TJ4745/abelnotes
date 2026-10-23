@@ -77,7 +77,7 @@ class ThumbnailService {
       // ── Collect asset paths referenced by the page's image elements ──
       final neededAssets = <String>{};
       for (final el in page.layers.content) {
-        el.map(
+        el.map(unknown: (_) {},
           stroke: (_) {},
           text: (_) {},
           shape: (_) {},
@@ -174,7 +174,7 @@ class ThumbnailService {
       // thumbnail renders image elements instead of blank rectangles.
       final neededRefs = <String>{};
       for (final el in page.layers.content) {
-        el.map(
+        el.map(unknown: (_) {},
           stroke: (_) {},
           text: (_) {},
           shape: (_) {},

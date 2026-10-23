@@ -557,6 +557,8 @@ class CanvasRenderEngine extends CustomPainter {
     final sortedContent = _getSortedContent(pageData.layers.content);
 
     for (final element in sortedContent) {
+      // Written by a newer build: kept on save, never painted.
+      if (element is UnknownElement) continue;
       // Type-discriminate via `is` (zero-alloc) instead of `.map(...)`
       // — the freezed-generated `map(stroke:..., text:..., image:..., shape:...)`
       // allocates 4 closure objects per call. With 200 elements × 2
@@ -572,7 +574,7 @@ class CanvasRenderEngine extends CustomPainter {
       } else if (element is ShapeElement) {
         id = element.id;
       } else {
-        id = (element as MathElement).id;
+        id = element.id;
       }
       final isSelected = selectedIdsSet.contains(id);
 
@@ -628,7 +630,7 @@ class CanvasRenderEngine extends CustomPainter {
         }
       }
 
-      element.map(
+      element.map(unknown: (u) => u,
         stroke: (e) => _paintStroke(canvas, e.data),
         text: (e) {
           if (isLiveTarget && liveEl.scaleW != 1.0) {
@@ -654,6 +656,7 @@ class CanvasRenderEngine extends CustomPainter {
   /// called every paint frame during a drag/rotate. Use is-checks
   /// (zero-alloc) instead of `.map(...)` (4 closures per call).
   Offset _elementCenter(ContentElement element) {
+    if (element is UnknownElement) return Offset.zero;
     if (element is StrokeElement) {
       final pts = element.data.points;
       if (pts.isEmpty) return Offset.zero;
@@ -685,6 +688,7 @@ class CanvasRenderEngine extends CustomPainter {
   /// for live resize so the rendered shape keeps its top-left at
   /// element.tl + dragOffset (matching the resize handle's bbox math).
   Offset _elementTopLeft(ContentElement element) {
+    if (element is UnknownElement) return Offset.zero;
     if (element is StrokeElement) {
       final pts = element.data.points;
       if (pts.isEmpty) return Offset.zero;
@@ -721,13 +725,23 @@ class CanvasRenderEngine extends CustomPainter {
     // Content
     final sortedContent = List<ContentElement>.from(pageData.layers.content)
       ..sort((a, b) {
-        final aZ = a.map(stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex);
-        final bZ = b.map(stroke: (s) => s.zIndex, text: (t) => t.zIndex, image: (i) => i.zIndex, shape: (s) => s.zIndex, math: (m) => m.zIndex);
+        final aZ = a.map(unknown: (u) => u.zIndex,
+            stroke: (s) => s.zIndex,
+            text: (t) => t.zIndex,
+            image: (i) => i.zIndex,
+            shape: (s) => s.zIndex,
+            math: (m) => m.zIndex);
+        final bZ = b.map(unknown: (u) => u.zIndex,
+            stroke: (s) => s.zIndex,
+            text: (t) => t.zIndex,
+            image: (i) => i.zIndex,
+            shape: (s) => s.zIndex,
+            math: (m) => m.zIndex);
         return aZ.compareTo(bZ);
       });
 
     for (final element in sortedContent) {
-      element.map(
+      element.map(unknown: (u) => u,
         stroke: (e) => _paintStroke(canvas, e.data),
         text: (e) => _paintText(canvas, e.data),
         image: (e) => _paintImage(canvas, e.data),
@@ -2238,7 +2252,7 @@ class CanvasRenderEngine extends CustomPainter {
     if (e is TextElement) return e.zIndex;
     if (e is ImageElement) return e.zIndex;
     if (e is ShapeElement) return e.zIndex;
-    return (e as MathElement).zIndex;
+    return e.zIndex;
   }
 
   static List<ContentElement> _getSortedContent(List<ContentElement> content) {

@@ -80,7 +80,7 @@ PdfBackgroundSplit? splitPdfBackground(PageData page) {
   final bg = _fullPageBackground(page);
   if (bg == null) return null;
   final rest = page.layers.content.where((e) => e.id != bg.id).toList();
-  final hasHighlighter = rest.any((e) => e.map(
+  final hasHighlighter = rest.any((e) => e.map(unknown: (_) => false,
         stroke: (s) => s.data.isHighlighter,
         shape: (s) => s.data.isHighlighter,
         text: (_) => false,

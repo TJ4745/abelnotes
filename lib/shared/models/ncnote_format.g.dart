@@ -152,17 +152,16 @@ _$RenderingLayersImpl _$$RenderingLayersImplFromJson(
           ? const BackgroundLayer()
           : BackgroundLayer.fromJson(
               json['background'] as Map<String, dynamic>),
-      content: (json['content'] as List<dynamic>?)
-              ?.map((e) => ContentElement.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
+      content: json['content'] == null
+          ? const []
+          : const ContentListConverter().fromJson(json['content'] as List),
     );
 
 Map<String, dynamic> _$$RenderingLayersImplToJson(
         _$RenderingLayersImpl instance) =>
     <String, dynamic>{
       'background': instance.background.toJson(),
-      'content': instance.content.map((e) => e.toJson()).toList(),
+      'content': const ContentListConverter().toJson(instance.content),
     };
 
 _$BackgroundLayerImpl _$$BackgroundLayerImplFromJson(
@@ -264,6 +263,23 @@ Map<String, dynamic> _$$MathElementImplToJson(_$MathElementImpl instance) =>
       'id': instance.id,
       'zIndex': instance.zIndex,
       'data': instance.data.toJson(),
+      'type': instance.$type,
+    };
+
+_$UnknownElementImpl _$$UnknownElementImplFromJson(Map<String, dynamic> json) =>
+    _$UnknownElementImpl(
+      id: json['id'] as String,
+      zIndex: (json['zIndex'] as num).toInt(),
+      raw: json['raw'] as Map<String, dynamic>,
+      $type: json['type'] as String?,
+    );
+
+Map<String, dynamic> _$$UnknownElementImplToJson(
+        _$UnknownElementImpl instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'zIndex': instance.zIndex,
+      'raw': instance.raw,
       'type': instance.$type,
     };
 

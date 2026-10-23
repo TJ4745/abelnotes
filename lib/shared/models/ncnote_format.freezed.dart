@@ -1557,6 +1557,7 @@ RenderingLayers _$RenderingLayersFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$RenderingLayers {
   BackgroundLayer get background => throw _privateConstructorUsedError;
+  @ContentListConverter()
   List<ContentElement> get content => throw _privateConstructorUsedError;
 
   /// Serializes this RenderingLayers to a JSON map.
@@ -1575,7 +1576,9 @@ abstract class $RenderingLayersCopyWith<$Res> {
           RenderingLayers value, $Res Function(RenderingLayers) then) =
       _$RenderingLayersCopyWithImpl<$Res, RenderingLayers>;
   @useResult
-  $Res call({BackgroundLayer background, List<ContentElement> content});
+  $Res call(
+      {BackgroundLayer background,
+      @ContentListConverter() List<ContentElement> content});
 
   $BackgroundLayerCopyWith<$Res> get background;
 }
@@ -1629,7 +1632,9 @@ abstract class _$$RenderingLayersImplCopyWith<$Res>
       __$$RenderingLayersImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({BackgroundLayer background, List<ContentElement> content});
+  $Res call(
+      {BackgroundLayer background,
+      @ContentListConverter() List<ContentElement> content});
 
   @override
   $BackgroundLayerCopyWith<$Res> get background;
@@ -1669,7 +1674,7 @@ class __$$RenderingLayersImplCopyWithImpl<$Res>
 class _$RenderingLayersImpl implements _RenderingLayers {
   const _$RenderingLayersImpl(
       {this.background = const BackgroundLayer(),
-      final List<ContentElement> content = const []})
+      @ContentListConverter() final List<ContentElement> content = const []})
       : _content = content;
 
   factory _$RenderingLayersImpl.fromJson(Map<String, dynamic> json) =>
@@ -1681,6 +1686,7 @@ class _$RenderingLayersImpl implements _RenderingLayers {
   final List<ContentElement> _content;
   @override
   @JsonKey()
+  @ContentListConverter()
   List<ContentElement> get content {
     if (_content is EqualUnmodifiableListView) return _content;
     // ignore: implicit_dynamic_type
@@ -1726,8 +1732,9 @@ class _$RenderingLayersImpl implements _RenderingLayers {
 
 abstract class _RenderingLayers implements RenderingLayers {
   const factory _RenderingLayers(
-      {final BackgroundLayer background,
-      final List<ContentElement> content}) = _$RenderingLayersImpl;
+          {final BackgroundLayer background,
+          @ContentListConverter() final List<ContentElement> content}) =
+      _$RenderingLayersImpl;
 
   factory _RenderingLayers.fromJson(Map<String, dynamic> json) =
       _$RenderingLayersImpl.fromJson;
@@ -1735,6 +1742,7 @@ abstract class _RenderingLayers implements RenderingLayers {
   @override
   BackgroundLayer get background;
   @override
+  @ContentListConverter()
   List<ContentElement> get content;
 
   /// Create a copy of RenderingLayers
@@ -2024,6 +2032,8 @@ ContentElement _$ContentElementFromJson(Map<String, dynamic> json) {
       return ShapeElement.fromJson(json);
     case 'math':
       return MathElement.fromJson(json);
+    case 'unknown':
+      return UnknownElement.fromJson(json);
 
     default:
       throw CheckedFromJsonException(json, 'type', 'ContentElement',
@@ -2035,7 +2045,6 @@ ContentElement _$ContentElementFromJson(Map<String, dynamic> json) {
 mixin _$ContentElement {
   String get id => throw _privateConstructorUsedError;
   int get zIndex => throw _privateConstructorUsedError;
-  Object get data => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function(String id, int zIndex, StrokeData data) stroke,
@@ -2043,6 +2052,8 @@ mixin _$ContentElement {
     required TResult Function(String id, int zIndex, ImageData data) image,
     required TResult Function(String id, int zIndex, ShapeData data) shape,
     required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -2052,6 +2063,7 @@ mixin _$ContentElement {
     TResult? Function(String id, int zIndex, ImageData data)? image,
     TResult? Function(String id, int zIndex, ShapeData data)? shape,
     TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -2061,6 +2073,7 @@ mixin _$ContentElement {
     TResult Function(String id, int zIndex, ImageData data)? image,
     TResult Function(String id, int zIndex, ShapeData data)? shape,
     TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -2071,6 +2084,7 @@ mixin _$ContentElement {
     required TResult Function(ImageElement value) image,
     required TResult Function(ShapeElement value) shape,
     required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -2080,6 +2094,7 @@ mixin _$ContentElement {
     TResult? Function(ImageElement value)? image,
     TResult? Function(ShapeElement value)? shape,
     TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -2089,6 +2104,7 @@ mixin _$ContentElement {
     TResult Function(ImageElement value)? image,
     TResult Function(ShapeElement value)? shape,
     TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -2258,6 +2274,8 @@ class _$StrokeElementImpl implements StrokeElement {
     required TResult Function(String id, int zIndex, ImageData data) image,
     required TResult Function(String id, int zIndex, ShapeData data) shape,
     required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
   }) {
     return stroke(id, zIndex, data);
   }
@@ -2270,6 +2288,7 @@ class _$StrokeElementImpl implements StrokeElement {
     TResult? Function(String id, int zIndex, ImageData data)? image,
     TResult? Function(String id, int zIndex, ShapeData data)? shape,
     TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
   }) {
     return stroke?.call(id, zIndex, data);
   }
@@ -2282,6 +2301,7 @@ class _$StrokeElementImpl implements StrokeElement {
     TResult Function(String id, int zIndex, ImageData data)? image,
     TResult Function(String id, int zIndex, ShapeData data)? shape,
     TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
     required TResult orElse(),
   }) {
     if (stroke != null) {
@@ -2298,6 +2318,7 @@ class _$StrokeElementImpl implements StrokeElement {
     required TResult Function(ImageElement value) image,
     required TResult Function(ShapeElement value) shape,
     required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
   }) {
     return stroke(this);
   }
@@ -2310,6 +2331,7 @@ class _$StrokeElementImpl implements StrokeElement {
     TResult? Function(ImageElement value)? image,
     TResult? Function(ShapeElement value)? shape,
     TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
   }) {
     return stroke?.call(this);
   }
@@ -2322,6 +2344,7 @@ class _$StrokeElementImpl implements StrokeElement {
     TResult Function(ImageElement value)? image,
     TResult Function(ShapeElement value)? shape,
     TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
     required TResult orElse(),
   }) {
     if (stroke != null) {
@@ -2351,7 +2374,6 @@ abstract class StrokeElement implements ContentElement {
   String get id;
   @override
   int get zIndex;
-  @override
   StrokeData get data;
 
   /// Create a copy of ContentElement
@@ -2477,6 +2499,8 @@ class _$TextElementImpl implements TextElement {
     required TResult Function(String id, int zIndex, ImageData data) image,
     required TResult Function(String id, int zIndex, ShapeData data) shape,
     required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
   }) {
     return text(id, zIndex, data);
   }
@@ -2489,6 +2513,7 @@ class _$TextElementImpl implements TextElement {
     TResult? Function(String id, int zIndex, ImageData data)? image,
     TResult? Function(String id, int zIndex, ShapeData data)? shape,
     TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
   }) {
     return text?.call(id, zIndex, data);
   }
@@ -2501,6 +2526,7 @@ class _$TextElementImpl implements TextElement {
     TResult Function(String id, int zIndex, ImageData data)? image,
     TResult Function(String id, int zIndex, ShapeData data)? shape,
     TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
     required TResult orElse(),
   }) {
     if (text != null) {
@@ -2517,6 +2543,7 @@ class _$TextElementImpl implements TextElement {
     required TResult Function(ImageElement value) image,
     required TResult Function(ShapeElement value) shape,
     required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
   }) {
     return text(this);
   }
@@ -2529,6 +2556,7 @@ class _$TextElementImpl implements TextElement {
     TResult? Function(ImageElement value)? image,
     TResult? Function(ShapeElement value)? shape,
     TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
   }) {
     return text?.call(this);
   }
@@ -2541,6 +2569,7 @@ class _$TextElementImpl implements TextElement {
     TResult Function(ImageElement value)? image,
     TResult Function(ShapeElement value)? shape,
     TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
     required TResult orElse(),
   }) {
     if (text != null) {
@@ -2570,7 +2599,6 @@ abstract class TextElement implements ContentElement {
   String get id;
   @override
   int get zIndex;
-  @override
   TextData get data;
 
   /// Create a copy of ContentElement
@@ -2696,6 +2724,8 @@ class _$ImageElementImpl implements ImageElement {
     required TResult Function(String id, int zIndex, ImageData data) image,
     required TResult Function(String id, int zIndex, ShapeData data) shape,
     required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
   }) {
     return image(id, zIndex, data);
   }
@@ -2708,6 +2738,7 @@ class _$ImageElementImpl implements ImageElement {
     TResult? Function(String id, int zIndex, ImageData data)? image,
     TResult? Function(String id, int zIndex, ShapeData data)? shape,
     TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
   }) {
     return image?.call(id, zIndex, data);
   }
@@ -2720,6 +2751,7 @@ class _$ImageElementImpl implements ImageElement {
     TResult Function(String id, int zIndex, ImageData data)? image,
     TResult Function(String id, int zIndex, ShapeData data)? shape,
     TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
     required TResult orElse(),
   }) {
     if (image != null) {
@@ -2736,6 +2768,7 @@ class _$ImageElementImpl implements ImageElement {
     required TResult Function(ImageElement value) image,
     required TResult Function(ShapeElement value) shape,
     required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
   }) {
     return image(this);
   }
@@ -2748,6 +2781,7 @@ class _$ImageElementImpl implements ImageElement {
     TResult? Function(ImageElement value)? image,
     TResult? Function(ShapeElement value)? shape,
     TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
   }) {
     return image?.call(this);
   }
@@ -2760,6 +2794,7 @@ class _$ImageElementImpl implements ImageElement {
     TResult Function(ImageElement value)? image,
     TResult Function(ShapeElement value)? shape,
     TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
     required TResult orElse(),
   }) {
     if (image != null) {
@@ -2789,7 +2824,6 @@ abstract class ImageElement implements ContentElement {
   String get id;
   @override
   int get zIndex;
-  @override
   ImageData get data;
 
   /// Create a copy of ContentElement
@@ -2915,6 +2949,8 @@ class _$ShapeElementImpl implements ShapeElement {
     required TResult Function(String id, int zIndex, ImageData data) image,
     required TResult Function(String id, int zIndex, ShapeData data) shape,
     required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
   }) {
     return shape(id, zIndex, data);
   }
@@ -2927,6 +2963,7 @@ class _$ShapeElementImpl implements ShapeElement {
     TResult? Function(String id, int zIndex, ImageData data)? image,
     TResult? Function(String id, int zIndex, ShapeData data)? shape,
     TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
   }) {
     return shape?.call(id, zIndex, data);
   }
@@ -2939,6 +2976,7 @@ class _$ShapeElementImpl implements ShapeElement {
     TResult Function(String id, int zIndex, ImageData data)? image,
     TResult Function(String id, int zIndex, ShapeData data)? shape,
     TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
     required TResult orElse(),
   }) {
     if (shape != null) {
@@ -2955,6 +2993,7 @@ class _$ShapeElementImpl implements ShapeElement {
     required TResult Function(ImageElement value) image,
     required TResult Function(ShapeElement value) shape,
     required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
   }) {
     return shape(this);
   }
@@ -2967,6 +3006,7 @@ class _$ShapeElementImpl implements ShapeElement {
     TResult? Function(ImageElement value)? image,
     TResult? Function(ShapeElement value)? shape,
     TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
   }) {
     return shape?.call(this);
   }
@@ -2979,6 +3019,7 @@ class _$ShapeElementImpl implements ShapeElement {
     TResult Function(ImageElement value)? image,
     TResult Function(ShapeElement value)? shape,
     TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
     required TResult orElse(),
   }) {
     if (shape != null) {
@@ -3008,7 +3049,6 @@ abstract class ShapeElement implements ContentElement {
   String get id;
   @override
   int get zIndex;
-  @override
   ShapeData get data;
 
   /// Create a copy of ContentElement
@@ -3134,6 +3174,8 @@ class _$MathElementImpl implements MathElement {
     required TResult Function(String id, int zIndex, ImageData data) image,
     required TResult Function(String id, int zIndex, ShapeData data) shape,
     required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
   }) {
     return math(id, zIndex, data);
   }
@@ -3146,6 +3188,7 @@ class _$MathElementImpl implements MathElement {
     TResult? Function(String id, int zIndex, ImageData data)? image,
     TResult? Function(String id, int zIndex, ShapeData data)? shape,
     TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
   }) {
     return math?.call(id, zIndex, data);
   }
@@ -3158,6 +3201,7 @@ class _$MathElementImpl implements MathElement {
     TResult Function(String id, int zIndex, ImageData data)? image,
     TResult Function(String id, int zIndex, ShapeData data)? shape,
     TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
     required TResult orElse(),
   }) {
     if (math != null) {
@@ -3174,6 +3218,7 @@ class _$MathElementImpl implements MathElement {
     required TResult Function(ImageElement value) image,
     required TResult Function(ShapeElement value) shape,
     required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
   }) {
     return math(this);
   }
@@ -3186,6 +3231,7 @@ class _$MathElementImpl implements MathElement {
     TResult? Function(ImageElement value)? image,
     TResult? Function(ShapeElement value)? shape,
     TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
   }) {
     return math?.call(this);
   }
@@ -3198,6 +3244,7 @@ class _$MathElementImpl implements MathElement {
     TResult Function(ImageElement value)? image,
     TResult Function(ShapeElement value)? shape,
     TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
     required TResult orElse(),
   }) {
     if (math != null) {
@@ -3227,7 +3274,6 @@ abstract class MathElement implements ContentElement {
   String get id;
   @override
   int get zIndex;
-  @override
   MathData get data;
 
   /// Create a copy of ContentElement
@@ -3235,6 +3281,227 @@ abstract class MathElement implements ContentElement {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$MathElementImplCopyWith<_$MathElementImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$UnknownElementImplCopyWith<$Res>
+    implements $ContentElementCopyWith<$Res> {
+  factory _$$UnknownElementImplCopyWith(_$UnknownElementImpl value,
+          $Res Function(_$UnknownElementImpl) then) =
+      __$$UnknownElementImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String id, int zIndex, Map<String, dynamic> raw});
+}
+
+/// @nodoc
+class __$$UnknownElementImplCopyWithImpl<$Res>
+    extends _$ContentElementCopyWithImpl<$Res, _$UnknownElementImpl>
+    implements _$$UnknownElementImplCopyWith<$Res> {
+  __$$UnknownElementImplCopyWithImpl(
+      _$UnknownElementImpl _value, $Res Function(_$UnknownElementImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of ContentElement
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? zIndex = null,
+    Object? raw = null,
+  }) {
+    return _then(_$UnknownElementImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      zIndex: null == zIndex
+          ? _value.zIndex
+          : zIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      raw: null == raw
+          ? _value._raw
+          : raw // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$UnknownElementImpl implements UnknownElement {
+  const _$UnknownElementImpl(
+      {required this.id,
+      required this.zIndex,
+      required final Map<String, dynamic> raw,
+      final String? $type})
+      : _raw = raw,
+        $type = $type ?? 'unknown';
+
+  factory _$UnknownElementImpl.fromJson(Map<String, dynamic> json) =>
+      _$$UnknownElementImplFromJson(json);
+
+  @override
+  final String id;
+  @override
+  final int zIndex;
+  final Map<String, dynamic> _raw;
+  @override
+  Map<String, dynamic> get raw {
+    if (_raw is EqualUnmodifiableMapView) return _raw;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_raw);
+  }
+
+  @JsonKey(name: 'type')
+  final String $type;
+
+  @override
+  String toString() {
+    return 'ContentElement.unknown(id: $id, zIndex: $zIndex, raw: $raw)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$UnknownElementImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.zIndex, zIndex) || other.zIndex == zIndex) &&
+            const DeepCollectionEquality().equals(other._raw, _raw));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, id, zIndex, const DeepCollectionEquality().hash(_raw));
+
+  /// Create a copy of ContentElement
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$UnknownElementImplCopyWith<_$UnknownElementImpl> get copyWith =>
+      __$$UnknownElementImplCopyWithImpl<_$UnknownElementImpl>(
+          this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(String id, int zIndex, StrokeData data) stroke,
+    required TResult Function(String id, int zIndex, TextData data) text,
+    required TResult Function(String id, int zIndex, ImageData data) image,
+    required TResult Function(String id, int zIndex, ShapeData data) shape,
+    required TResult Function(String id, int zIndex, MathData data) math,
+    required TResult Function(String id, int zIndex, Map<String, dynamic> raw)
+        unknown,
+  }) {
+    return unknown(id, zIndex, raw);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(String id, int zIndex, StrokeData data)? stroke,
+    TResult? Function(String id, int zIndex, TextData data)? text,
+    TResult? Function(String id, int zIndex, ImageData data)? image,
+    TResult? Function(String id, int zIndex, ShapeData data)? shape,
+    TResult? Function(String id, int zIndex, MathData data)? math,
+    TResult? Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
+  }) {
+    return unknown?.call(id, zIndex, raw);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(String id, int zIndex, StrokeData data)? stroke,
+    TResult Function(String id, int zIndex, TextData data)? text,
+    TResult Function(String id, int zIndex, ImageData data)? image,
+    TResult Function(String id, int zIndex, ShapeData data)? shape,
+    TResult Function(String id, int zIndex, MathData data)? math,
+    TResult Function(String id, int zIndex, Map<String, dynamic> raw)? unknown,
+    required TResult orElse(),
+  }) {
+    if (unknown != null) {
+      return unknown(id, zIndex, raw);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(StrokeElement value) stroke,
+    required TResult Function(TextElement value) text,
+    required TResult Function(ImageElement value) image,
+    required TResult Function(ShapeElement value) shape,
+    required TResult Function(MathElement value) math,
+    required TResult Function(UnknownElement value) unknown,
+  }) {
+    return unknown(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(StrokeElement value)? stroke,
+    TResult? Function(TextElement value)? text,
+    TResult? Function(ImageElement value)? image,
+    TResult? Function(ShapeElement value)? shape,
+    TResult? Function(MathElement value)? math,
+    TResult? Function(UnknownElement value)? unknown,
+  }) {
+    return unknown?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(StrokeElement value)? stroke,
+    TResult Function(TextElement value)? text,
+    TResult Function(ImageElement value)? image,
+    TResult Function(ShapeElement value)? shape,
+    TResult Function(MathElement value)? math,
+    TResult Function(UnknownElement value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (unknown != null) {
+      return unknown(this);
+    }
+    return orElse();
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$UnknownElementImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class UnknownElement implements ContentElement {
+  const factory UnknownElement(
+      {required final String id,
+      required final int zIndex,
+      required final Map<String, dynamic> raw}) = _$UnknownElementImpl;
+
+  factory UnknownElement.fromJson(Map<String, dynamic> json) =
+      _$UnknownElementImpl.fromJson;
+
+  @override
+  String get id;
+  @override
+  int get zIndex;
+  Map<String, dynamic> get raw;
+
+  /// Create a copy of ContentElement
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$UnknownElementImplCopyWith<_$UnknownElementImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
 

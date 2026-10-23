@@ -25,7 +25,7 @@ PageData _page(String id, List<ContentElement> content) => PageData(
     );
 
 List<String> _ids(PageData? p) => [
-      for (final e in p!.layers.content) e.map(
+      for (final e in p!.layers.content) e.map(unknown: (u) => u.id,
           stroke: (s) => s.id,
           text: (t) => t.id,
           image: (i) => i.id,
