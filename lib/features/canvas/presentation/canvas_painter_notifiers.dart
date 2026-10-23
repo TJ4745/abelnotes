@@ -35,6 +35,7 @@ class ActiveStrokeNotifier extends ChangeNotifier {
   /// 0.5 fallback. Detected from the first [start] pressure: anything <= 0
   /// means "no real pressure data", at which point we synth.
   bool _synthPressure = false;
+
   /// EMA state for synth pressure (0..1). Smoothed across points so width
   /// modulation isn't choppy on irregular sample rates.
   double _synthEma = 0.6;
@@ -55,13 +56,43 @@ class ActiveStrokeNotifier extends ChangeNotifier {
   /// string) model — mouse/touchpad on desktop with a known screen scale.
   bool _lazyBrush = false;
 
+  /// True while every screen position of the current stroke has landed on
+  /// a whole logical pixel. Safari reports pointer positions as integer CSS
+  /// pixels, so on the web the Apple Pencil arrives on the same ±0.5 px
+  /// staircase as Windows' integer coords — and gets the same dejitter.
+  /// Cleared by [noteFractionalInput] the moment a sub-pixel sample shows
+  /// up, so browsers that deliver real precision stay a passthrough.
+  bool _integerCoords = false;
+
+  /// Wall-clock and event-clock time of the stroke's first sample, when the
+  /// caller supplies event times (web). The browser hands over a frame's
+  /// worth of pen samples at once, so stamping each with "now" made them
+  /// all simultaneous: the renderer read near-zero dt as extreme speed and
+  /// the width jittered. Stamps are rebuilt from the events' own clock.
+  int _t0Ms = 0;
+  Duration? _t0Event;
+
+  int _stamp(Duration? eventTime) {
+    final t0 = _t0Event;
+    if (eventTime == null || t0 == null) {
+      return DateTime.now().millisecondsSinceEpoch;
+    }
+    return _t0Ms + (eventTime - t0).inMilliseconds;
+  }
+
   List<StrokePoint> get points => _points;
   bool get isActive => _active;
 
-  void start(Offset pos, double pressure, {double pageUnitsPerPx = 0}) {
+  void start(Offset pos, double pressure,
+      {double pageUnitsPerPx = 0,
+      bool integerCoords = false,
+      Duration? eventTime}) {
     _points.clear();
     _active = true;
+    _t0Ms = DateTime.now().millisecondsSinceEpoch;
+    _t0Event = eventTime;
     _pageUnitsPerPx = pageUnitsPerPx;
+    _integerCoords = integerCoords;
     _lastRawPos = pos;
     _lazyBrush = false;
     _isDesktop = !kIsWeb &&
@@ -72,12 +103,30 @@ class ActiveStrokeNotifier extends ChangeNotifier {
     _synthPressure = pressure <= 0.0;
     _synthEma = 0.6;
     final p0 = _synthPressure ? 0.6 : pressure;
-    _points.add(StrokePoint(x: pos.dx, y: pos.dy, pressure: p0,
-        timestamp: DateTime.now().millisecondsSinceEpoch));
+    _points
+        .add(StrokePoint(x: pos.dx, y: pos.dy, pressure: p0, timestamp: _t0Ms));
     notifyListeners();
   }
 
-  void addPoint(Offset pos, double pressure) {
+  /// A sample of this stroke carried sub-pixel precision: the input isn't
+  /// quantized, so the integer-coordinate dejitter must stay off.
+  void noteFractionalInput() => _integerCoords = false;
+
+  /// Single-pole dejitter for integer-pixel input: the weight on the new
+  /// point ramps from 0.3 (steps ≲ the quantization scale, mostly noise) to
+  /// 1.0 (≥ 4 px, deliberate movement passes through untouched).
+  Offset _dequantizeStep(Offset pos) {
+    final last = _points.last;
+    final ddx = pos.dx - last.x;
+    final ddy = pos.dy - last.y;
+    final stepPx = sqrt(ddx * ddx + ddy * ddy) / _pageUnitsPerPx;
+    final alpha =
+        stepPx >= 4.0 ? 1.0 : (0.3 + 0.7 * (stepPx / 4.0)).clamp(0.3, 1.0);
+    return Offset(last.x + ddx * alpha, last.y + ddy * alpha);
+  }
+
+  void addPoint(Offset pos, double pressure, {Duration? eventTime}) {
+    final nowMs = _stamp(eventTime);
     // Always remember where the cursor really is — snapshotForCommit
     // completes the lazy-brush tail from here even when this sample gets
     // rejected or absorbed by the dead zone below.
@@ -220,15 +269,19 @@ class ActiveStrokeNotifier extends ChangeNotifier {
           io.Platform.isWindows &&
           _pageUnitsPerPx > 0 &&
           _points.isNotEmpty) {
-        final last = _points.last;
-        final ddx = pos.dx - last.x;
-        final ddy = pos.dy - last.y;
-        final stepPx = sqrt(ddx * ddx + ddy * ddy) / _pageUnitsPerPx;
-        final alpha =
-            stepPx >= 4.0 ? 1.0 : (0.3 + 0.7 * (stepPx / 4.0)).clamp(0.3, 1.0);
-        sx = last.x + ddx * alpha;
-        sy = last.y + ddy * alpha;
+        final d = _dequantizeStep(pos);
+        sx = d.dx;
+        sy = d.dy;
       }
+    } else if (_integerCoords && _pageUnitsPerPx > 0 && _points.isNotEmpty) {
+      // ── Web: Apple Pencil on integer CSS pixels (Safari) ──
+      // The native iPad path below assumes float coordinates; on whole
+      // pixels its light 3-point window keeps the staircase, which the
+      // renderer's Catmull-Rom turns into a wave. Same cure as Windows.
+      final d = _dequantizeStep(pos);
+      sx = d.dx;
+      sy = d.dy;
+      sp = _points.last.pressure * 0.5 + pressure * 0.5;
     } else {
       // ── Touch / Apple Pencil smoothing (very light, high current-weight) ─
       // Apple Pencil is already hardware-filtered at 120 Hz. A 3-point
@@ -261,7 +314,6 @@ class ActiveStrokeNotifier extends ChangeNotifier {
       final last = _points.last;
       final dx2 = pos.dx - last.x;
       final dy2 = pos.dy - last.y;
-      final nowMs = DateTime.now().millisecondsSinceEpoch;
       final dt = nowMs - last.timestamp;
       final dtMs = dt < 1 ? 1 : dt;
       // Page-units PER SECOND (was per-sample). Independent of the
@@ -286,8 +338,10 @@ class ActiveStrokeNotifier extends ChangeNotifier {
     // still continuously curved). Trust the renderer's adaptive
     // Catmull-Rom to handle sparse control points correctly.
     _points.add(StrokePoint(
-      x: sx, y: sy, pressure: sp,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
+      x: sx,
+      y: sy,
+      pressure: sp,
+      timestamp: nowMs,
     ));
     notifyListeners();
   }
@@ -305,8 +359,8 @@ class ActiveStrokeNotifier extends ChangeNotifier {
   /// clamped to ≤ 0.75 screen px (the quantization noise amplitude). The
   /// wave — whose amplitude is exactly that noise — is flattened, while
   /// genuine geometry (sharp corners, wide sweeps) cannot be distorted
-  /// beyond the invisible noise floor BY CONSTRUCTION. No-op off Windows,
-  /// when the stroke used sub-pixel pen data (_pageUnitsPerPx == 0), or
+  /// beyond the invisible noise floor BY CONSTRUCTION. No-op off Windows
+  /// (except integer-pixel web input, see [_integerCoords]), when the stroke used sub-pixel pen data (_pageUnitsPerPx == 0), or
   /// for tiny strokes.
   List<StrokePoint> snapshotForCommit() {
     final pts = List<StrokePoint>.from(_points);
@@ -326,10 +380,8 @@ class ActiveStrokeNotifier extends ChangeNotifier {
         ));
       }
     }
-    if (kIsWeb ||
-        !io.Platform.isWindows ||
-        _pageUnitsPerPx <= 0 ||
-        pts.length < 5) {
+    final quantized = _integerCoords || (!kIsWeb && io.Platform.isWindows);
+    if (!quantized || _pageUnitsPerPx <= 0 || pts.length < 5) {
       return pts;
     }
     final maxShift = 0.75 * _pageUnitsPerPx; // page units

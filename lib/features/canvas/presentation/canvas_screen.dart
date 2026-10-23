@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:abelnotes/core/platform/device_class.dart';
 import 'package:abelnotes/core/platform/io.dart' as io;
 import 'package:abelnotes/config/app_config.dart';
 import 'package:abelnotes/core/services/desktop_window.dart';
@@ -952,6 +953,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   @override
   void initState() {
     super.initState();
+    webTouchDevice.addListener(_onWebTouchDeviceChanged);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WidgetsBinding.instance.addObserver(this);
     _startAutoSave();
@@ -1066,7 +1068,21 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   /// constant thickness. Rescale by pressureMin/Max only on Windows:
   /// iOS deliberately reports max ≈ 6.67 with 1.0 = "normal press", and
   /// rescaling there would flatten Apple Pencil strokes.
+  /// `UITouch.maximumPossibleForce` of an Apple Pencil (500/120).
+  static const double _applePencilMaxForce = 4.1666666667;
+
   double _normalizedEventPressure(PointerEvent event) {
+    // Web on iPad: Safari hands out the Pencil's force already divided by
+    // its full scale (0..1), while the native iOS embedder passes the raw
+    // force (0..maximumPossibleForce ≈ 4.17) and everything downstream —
+    // smoothing, the renderer's width curve — is tuned on that. Undo
+    // Safari's normalisation so a stroke has the same weight as in the app.
+    if (kIsWeb &&
+        isWebTouchDevice &&
+        (event.kind == PointerDeviceKind.stylus ||
+            event.kind == PointerDeviceKind.invertedStylus)) {
+      return event.pressure * _applePencilMaxForce;
+    }
     if (!kIsWeb && io.Platform.isWindows && event.pressureMax > 1.0) {
       final range = event.pressureMax - event.pressureMin;
       if (range > 0) {
@@ -1100,6 +1116,66 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   /// suppressed the pen-up commit, losing all ink drawn after the wrist
   /// touched the screen. Tracked so their UP/CANCEL skips the decrement.
   final Set<int> _ignoredPalmPointers = <int>{};
+
+  // ── Web palm rejection ──
+  //
+  // Natively iPadOS drops a resting palm by itself while the Pencil is in
+  // use. Safari doesn't: the palm reaches the page as ordinary touches. The
+  // case above (palm lands while the pen is down) was already covered, but
+  // a palm landing just BEFORE the pen made the pen the second pointer,
+  // which reads as a two-finger pinch: the stroke in progress was cancelled
+  // and the pen drew nothing until the hand lifted — strokes "vanishing"
+  // whenever the user wrote quickly. On the web the pen therefore always
+  // wins, and a touch right after pen activity is a palm.
+
+  /// Touch pointers currently down and counted (web only).
+  final Set<int> _webTouchPointers = <int>{};
+
+  /// Last stylus down/move/up (web only).
+  DateTime? _lastStylusAt;
+
+  /// How long after the pen was last on the glass a touch is still a palm.
+  static const Duration _webPalmWindow = Duration(milliseconds: 800);
+
+  bool get _webPenRecentlyActive =>
+      kIsWeb &&
+      _lastStylusAt != null &&
+      DateTime.now().difference(_lastStylusAt!) < _webPalmWindow;
+
+  static bool _isPen(PointerEvent e) =>
+      e.kind == PointerDeviceKind.stylus ||
+      e.kind == PointerDeviceKind.invertedStylus;
+
+  /// Web palm handling at pointer-down. Returns true when [event] is a palm
+  /// and must be dropped.
+  bool _webPalmDown(PointerDownEvent event) {
+    if (!kIsWeb) return false;
+    if (_isPen(event)) {
+      _lastStylusAt = DateTime.now();
+      if (_webTouchPointers.isEmpty) return false;
+      // The palm got there first. Undo whatever it started (a finger
+      // stroke, a pan) and hand the canvas to the pen.
+      if (_activeStrokeNotifier.isActive && _deferredCommitPoints == null) {
+        _activeStrokeNotifier.clear();
+        ref.read(canvasProvider.notifier).cancelStroke();
+      }
+      _isTouchPanning = false;
+      _cancelLongPressTimer();
+      _activePointers = max(0, _activePointers - _webTouchPointers.length);
+      _ignoredPalmPointers.addAll(_webTouchPointers);
+      _webTouchPointers.clear();
+      return false;
+    }
+    if (event.kind == PointerDeviceKind.touch) {
+      if (_stylusDown || _webPenRecentlyActive) {
+        _ignoredPalmPointers.add(event.pointer);
+        _strokeDbg('PALM dropped p=${event.pointer}');
+        return true;
+      }
+      _webTouchPointers.add(event.pointer);
+    }
+    return false;
+  }
 
   /// Tool the current bridge-driven pen gesture is driving. Set on
   /// `_onBarrelPen("down", …)` from the live state and used through
@@ -1375,6 +1451,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
   @override
   void dispose() {
+    webTouchDevice.removeListener(_onWebTouchDeviceChanged);
     _dockFlyX.dispose();
     _dockFlyY.dispose();
     _hintMessenger?.hideCurrentSnackBar();
@@ -2246,9 +2323,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   /// True on a touch-primary platform (no mouse to speak of) — gates
   /// whether the top bar shows the mouse-mode toggle or the touch-mode one,
   /// and is the platform-default fallback for [_effectiveStylusOnly].
-  bool get _isMobilePlatform =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.iOS ||
+  void _onWebTouchDeviceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _isMobilePlatform => kIsWeb
+      ? isWebTouchDevice
+      : (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android);
 
   /// Whether touch should be treated as pan-only (true) or as a drawing
@@ -2280,6 +2361,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       _suppressedSynthBarrelPointers.add(event.pointer);
       return;
     }
+    if (_webPalmDown(event)) return;
     _activePointers++;
     _panAnchorFromPinch = false;
     _lastPointerWasMouse = event.kind == PointerDeviceKind.mouse;
@@ -2435,7 +2517,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         'tool=${state.currentTool.name} '
         'active=${_activeStrokeNotifier.isActive} '
         'activePointers=$_activePointers$distStr'
-        '${isBreakSusp ? " BREAK_SUSPECTED" : ""}',
+        '${isBreakSusp ? " BREAK_SUSPECTED" : ""} '
+        'adjusting=${state.isAdjustingRecognized} '
+        'shape=${state.recognizedShape?.shapeType} '
+        'selected=${state.selectedElementId != null} '
+        'lasso=${state.lassoSelection != null} '
+        'paste=${state.pendingPaste}',
       );
 
       // ── Continuation check (iPad spurious Up→Down) ──
@@ -2497,6 +2584,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         return;
       }
       // True multi-touch (two fingers, no stylus): pinch-to-zoom gesture.
+      _strokeDbg('MULTITOUCH p=${event.pointer} kind=${event.kind.name} '
+          'activePointers=$_activePointers');
       if (_activeStrokeNotifier.isActive) {
         _activeStrokeNotifier.clear();
         ref.read(canvasProvider.notifier).cancelStroke();
@@ -2850,12 +2939,23 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       ref.read(canvasProvider.notifier).clearSelection();
     }
     final rawPressureForPen = _penPressure(event);
+    if (_isPen(event)) _strokeDbg('START stroke p=${event.pointer}');
     ref.read(canvasProvider.notifier).startStroke(pagePos, pressure);
     _activeStrokeNotifier.start(pagePos, rawPressureForPen,
-        pageUnitsPerPx: _pageUnitsPerScreenPx(state, canvasSize));
+        pageUnitsPerPx: _pageUnitsPerScreenPx(state, canvasSize),
+        integerCoords: _onIntegerPixels(event.position),
+        eventTime: kIsWeb ? event.timeStamp : null);
     _lastStrokeActivity = DateTime.now();
     _lastHoldCheckPos = pagePos;
   }
+
+  /// Whether a web pointer position sits on whole logical pixels — Safari's
+  /// integer CSS-pixel coordinates (see ActiveStrokeNotifier._integerCoords).
+  /// Always false natively, where the platform paths handle precision.
+  bool _onIntegerPixels(Offset position) =>
+      kIsWeb &&
+      position.dx == position.dx.roundToDouble() &&
+      position.dy == position.dy.roundToDouble();
 
   /// Page units spanned by one logical screen pixel at the current zoom —
   /// the quantization scale of Windows' integer-pixel pointer coords. Fed
@@ -2916,6 +3016,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (_suppressedSynthBarrelPointers.contains(event.pointer)) return;
     // Palm resting next to the stylus: its own moves must not draw/pan.
     if (_ignoredPalmPointers.contains(event.pointer)) return;
+    if (kIsWeb && _isPen(event)) _lastStylusAt = DateTime.now();
     if (_activePointers >= 2) return;
 
     // ── PDF text selection drag (device-aware; started in _onPointerDown) ──
@@ -3048,14 +3149,20 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
             ref.read(canvasProvider.notifier).commitAndEndStroke(keptPts);
             ref.read(canvasProvider.notifier).startStroke(pagePos, pressure);
             _activeStrokeNotifier.start(pagePos, rawPressureForPen,
-                pageUnitsPerPx: _pageUnitsPerScreenPx(state, canvasSize));
+                pageUnitsPerPx: _pageUnitsPerScreenPx(state, canvasSize),
+                integerCoords: _onIntegerPixels(event.position),
+        eventTime: kIsWeb ? event.timeStamp : null);
             _lastStrokeActivity = DateTime.now();
             _lastHoldCheckPos = pagePos;
             return;
           }
         }
       }
-      _activeStrokeNotifier.addPoint(pagePos, rawPressureForPen);
+      if (kIsWeb && !_onIntegerPixels(event.position)) {
+        _activeStrokeNotifier.noteFractionalInput();
+      }
+      _activeStrokeNotifier.addPoint(pagePos, rawPressureForPen,
+          eventTime: kIsWeb ? event.timeStamp : null);
       _lastStrokeActivity = DateTime.now();
 
       // Reset hold-to-recognize timer (GoodNotes-style: recognize when user pauses)
@@ -3100,6 +3207,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // Check if it was recognized
     final newState = ref.read(canvasProvider);
     if (newState?.recognizedShape != null) {
+      _strokeDbg('HOLD recognized ${newState!.recognizedShape!.shapeType} '
+          'pts=${points.length}');
       _shapeRecognizedDuringHold = true;
       _activeStrokeNotifier.clearPoints(); // Hide stroke, keep active flag
     }
@@ -3112,6 +3221,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (_suppressedSynthBarrelPointers.remove(event.pointer)) return;
     // Ignored palm pointer lifting: never counted, so don't decrement.
     if (_ignoredPalmPointers.remove(event.pointer)) return;
+    _webTouchPointers.remove(event.pointer);
+    if (kIsWeb && _isPen(event)) _lastStylusAt = DateTime.now();
     final wasMultiTouch = _activePointers >= 2;
     _activePointers = max(0, _activePointers - 1);
 
@@ -3144,7 +3255,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         'active=${_activeStrokeNotifier.isActive} '
         'pts=${_activeStrokeNotifier.points.length} '
         'multiTouch=$wasMultiTouch '
-        'activePointers=$_activePointers',
+        'activePointers=$_activePointers'
+        '${kIsWeb ? ' intPx=${_onIntegerPixels(event.position)}' : ''}',
       );
       _stylusDown = false;
     }
@@ -3287,9 +3399,24 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       // For non-stylus (mouse/touchpad/touch) commit immediately as
       // before — the bug is iPad-specific and adding latency on PC
       // would be a regression.
-      if ((event.kind == PointerDeviceKind.stylus ||
-              event.kind == PointerDeviceKind.invertedStylus) &&
-          ref.read(appSettingsProvider).strokeContinuation) {
+      final isPen = event.kind == PointerDeviceKind.stylus ||
+          event.kind == PointerDeviceKind.invertedStylus;
+      // Web: the browser samples the pen far more sparsely than iPadOS
+      // does natively (Safari: one move per frame at best), and the lift
+      // position is never fed in as a point. On a fast stroke that drops
+      // its whole last segment, so a quick "I" shrinks to a stub or a
+      // dot. End the stroke where the pen actually left the glass. (UP
+      // carries no pressure in the browser — reuse the last sample's.)
+      if (isPen && kIsWeb) {
+        final live = ref.read(canvasProvider);
+        if (live != null) {
+          _activeStrokeNotifier.addPoint(
+              _toPageCoords(event.localPosition, live, _lastCanvasSize),
+              _activeStrokeNotifier.points.last.pressure,
+              eventTime: event.timeStamp);
+        }
+      }
+      if (isPen && ref.read(appSettingsProvider).strokeContinuation) {
         // Snapshot points (notifier stays active so the rendered live
         // stroke remains on screen during the defer window). The
         // snapshot is the dequantized commit copy — the pen fallback
@@ -3335,6 +3462,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // Ignored palm pointer cancelled: never counted, so don't decrement —
     // and don't touch the active stylus stroke either.
     if (_ignoredPalmPointers.remove(event.pointer)) return;
+    _webTouchPointers.remove(event.pointer);
     _activePointers = max(0, _activePointers - 1);
     // End any in-progress PDF text drag / mouse marquee and resolve a deferred
     // barrel revert so a cancelled gesture doesn't leave the flags stuck.
@@ -3653,8 +3781,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   void _onScaleStart(ScaleStartDetails details) {
     // Palm rejection: if the stylus is currently drawing, the scale gesture
     // was triggered by the user's wrist landing on the screen — ignore it
-    // so the canvas doesn't zoom mid-stroke.
-    if (_stylusDown) return;
+    // so the canvas doesn't zoom mid-stroke. On the web the same goes for
+    // a hand that lands right after the pen lifted (see _webPalmWindow).
+    if (_stylusDown || _webPenRecentlyActive) return;
     final state = ref.read(canvasProvider);
     if (state == null) return;
     _baseZoom = state.zoom;
@@ -3667,7 +3796,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // rejected, Flutter still calls onScaleUpdate during the gesture — we
     // must gate it too, otherwise a palm landing mid-stroke can still move
     // the zoom level via the accumulated scale delta.
-    if (_stylusDown) return;
+    if (_stylusDown || _webPenRecentlyActive) return;
     // Accept scale gesture if either: 2+ pointers (multi-touch), or scale != 1 (trackpad pinch)
     if (details.pointerCount < 2 && (details.scale - 1).abs() < 0.001) return;
 
@@ -5167,6 +5296,10 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                       }
                       _showContextMenu(e.position, e.localPosition, live, canvasSize);
                       return;
+                    }
+                    if (kIsWeb && e.kind != PointerDeviceKind.mouse &&
+                        e.kind != PointerDeviceKind.trackpad) {
+                      noteWebTouchInput();
                     }
                     _mouseDoubleClickZoom(e, live);
                     _onPointerDown(e, live, canvasSize);

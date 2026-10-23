@@ -44,6 +44,11 @@ class CrashLogger {
   static File? _logFile;
   static bool _initialised = false;
 
+  // Web: every append rewrites the whole file into IndexedDB, which with
+  // pen diagnostics on meant megabytes per second. Lines are batched there.
+  static final StringBuffer _webPending = StringBuffer();
+  static Timer? _webFlush;
+
   /// Must be called once at app startup (before `runApp`).
   static Future<void> init() async {
     if (_initialised) return;
@@ -111,6 +116,11 @@ class CrashLogger {
     final file = _logFile;
     if (file == null) return;
     if (!verboseEnabled && _isVerboseRoutine(message)) return;
+    if (kIsWeb) {
+      _webPending.write('[${DateTime.now().toIso8601String()}] $message\n');
+      _webFlush ??= Timer(const Duration(seconds: 1), _flushWeb);
+      return;
+    }
     try {
       final stamp = DateTime.now().toIso8601String();
       // flush:false intentionally — flush:true forces an fsync per
@@ -128,6 +138,18 @@ class CrashLogger {
     } catch (_) {
       // Never let logging failures propagate.
     }
+  }
+
+  static Future<void> _flushWeb() async {
+    _webFlush = null;
+    final file = _logFile;
+    if (file == null || _webPending.isEmpty) return;
+    final text = _webPending.toString();
+    _webPending.clear();
+    try {
+      await file.writeAsString(text, mode: FileMode.append);
+      await _rotateIfTooBig();
+    } catch (_) {}
   }
 
   /// True if [message] is routine instrumentation that should be
@@ -157,9 +179,23 @@ class CrashLogger {
   /// Returns the entire log contents or an empty string if nothing logged.
   static Future<String> read() async {
     final file = _logFile;
-    if (file == null || !await file.exists()) return '';
+    if (file == null) return '';
+    if (!await file.exists()) return _webPending.toString();
     try {
-      return await file.readAsString();
+      return await file.readAsString() + _webPending.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// [read] without awaiting, so a caller can hand the text to the clipboard
+  /// inside the tap that asked for it (Safari refuses a copy made later).
+  static String readNow() {
+    final file = _logFile;
+    if (file == null) return '';
+    try {
+      return (file.existsSync() ? file.readAsStringSync() : '') +
+          _webPending.toString();
     } catch (_) {
       return '';
     }
@@ -170,6 +206,7 @@ class CrashLogger {
     final file = _logFile;
     if (file == null) return;
     try {
+      _webPending.clear();
       if (await file.exists()) {
         await file.writeAsString('', mode: FileMode.write, flush: true);
       }

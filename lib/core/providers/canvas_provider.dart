@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
+import 'package:abelnotes/core/platform/device_class.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:abelnotes/config/app_config.dart';
@@ -92,6 +93,25 @@ PageData carryPdfTextLayer(PageData before, PageData after) {
 
 class CanvasNotifier extends StateNotifier<CanvasState?> {
   final Ref _ref;
+
+  // Pen diagnostics (CrashLogger.verboseEnabled): the last committed stroke,
+  // so a state write that drops it is logged with the writer's stack.
+  String? _diagStrokeId;
+  String? _diagStrokePage;
+
+  @override
+  set state(CanvasState? value) {
+    final id = _diagStrokeId;
+    if (id != null && value != null && CrashLogger.verboseEnabled) {
+      final page = value.pages[_diagStrokePage];
+      if (page != null && !page.layers.content.any((e) => e.id == id)) {
+        _diagStrokeId = null;
+        CrashLogger.append('[StrokeDbg] STROKE-LOST $id '
+            'undo=${value.undoStack.length}\n${StackTrace.current}');
+      }
+    }
+    super.state = value;
+  }
   // Track whether we've pushed undo for the current eraser/drag gesture
   bool _eraserUndoPushed = false;
   // Same idea for a selection-width slider drag: one undo entry per
@@ -1572,7 +1592,10 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   static const int _desktopAssetWindow = 6;
   static const int _desktopImageCacheMax = 48;
 
+  // Web on a tablet counts as mobile: Safari's per-tab memory ceiling is
+  // tighter than the native app's, so it gets the small caches too.
   static bool get _isMobilePlatform =>
+      isWebTouchDevice ||
       defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android;
   static int get _assetWindow =>
@@ -3272,6 +3295,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       redoStack: [],
       isDirty: true,
     );
+    if (CrashLogger.verboseEnabled) {
+      _diagStrokeId = newElement.id;
+      _diagStrokePage = fileName;
+      CrashLogger.append('[StrokeDbg] COMMIT ${newElement.id} '
+          'pts=${smoothedPoints.length} page=$fileName '
+          'undo=${undoStack.length}');
+    }
   }
 
 
@@ -4616,6 +4646,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   }
 
   void undo() {
+    _diagStrokeId = null;
     if (state == null || state!.document.pages.isEmpty) return;
     final fileName = state!.currentPageFileName;
     final sel = state!.lassoSelection;

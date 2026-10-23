@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+  Recovery page: drops the offline copy of the app (service worker + Cache
+  Storage) and reloads the latest build. Notebooks live in IndexedDB and are
+  not touched. Never precached, so a stuck install always reaches the server.
+-->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AbelNotes</title>
+</head>
+<body style="margin:0;background:#f4f1eb;font:16px -apple-system,system-ui,sans-serif;color:#3a3a3a;display:flex;align-items:center;justify-content:center;height:100vh">
+  <p>AbelNotes…</p>
+  <script>
+    (async function () {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }
+      } catch (_) {}
+      location.replace('./' + location.search);
+    })();
+  </script>
+</body>
+</html>

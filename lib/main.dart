@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:abelnotes/core/platform/io.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
+import 'package:abelnotes/core/platform/device_class.dart';
 import 'package:abelnotes/core/platform/web_bootstrap.dart';
 import 'package:abelnotes/core/providers/app_mode_provider.dart';
 import 'package:abelnotes/core/providers/remote_store_provider.dart';
@@ -30,7 +32,29 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main(List<String> args) async {
   await runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    // Before the crash log: on the web its file lives in the IndexedDB-backed
+    // store, which has to be loaded first or the log is overwritten.
+    if (kIsWeb) await initWebStorage();
     await CrashLogger.init();
+    if (kIsWeb) CrashLogger.append('[Web] ${webDeviceDiagnostics()}');
+    if (webDiagnostics) {
+      CrashLogger.verboseEnabled = true;
+      installWebPointerProbe((m) => CrashLogger.append('[StrokeDbg] $m'));
+      startWebDiagUpload(CrashLogger.readNow);
+      GestureBinding.instance.pointerRouter.addGlobalRoute((e) {
+        if (e is PointerDownEvent ||
+            e is PointerUpEvent ||
+            e is PointerCancelEvent) {
+          final kind = e is PointerDownEvent
+              ? 'down'
+              : e is PointerUpEvent
+                  ? 'up'
+                  : 'cancel';
+          CrashLogger.append('[StrokeDbg] FLUTTER $kind '
+              'p=${e.pointer} kind=${e.kind.name} pos=${e.position}');
+        }
+      });
+    }
 
     // MPL-2.0 attribution for the Rust onenote_parser crate bundled via the
     // OneNote import bridge; surfaces in the About → open-source licenses page.
@@ -45,9 +69,7 @@ void main(List<String> args) async {
       yield LicenseEntryWithLineBreaks(const ['Instrument Sans'], text);
     });
 
-    if (kIsWeb) {
-      await initWebStorage();
-    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }

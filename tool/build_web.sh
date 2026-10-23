@@ -13,7 +13,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 BASE_HREF="${1:-/}"
-flutter build web --release --no-web-resources-cdn --base-href "$BASE_HREF"
+# SOURCE_MAPS=1 adds main.dart.js.map, to read stack traces from a device log.
+flutter build web --release --no-web-resources-cdn --base-href "$BASE_HREF" \
+  ${SOURCE_MAPS:+--source-maps}
 
 OUT=build/web
 BUILD_ID="$(date +%Y%m%d%H%M%S)"
@@ -22,7 +24,7 @@ BUILD_ID="$(date +%Y%m%d%H%M%S)"
 # variants for other renderers (skwasm, webparagraph) are never loaded.
 FILES="$(cd "$OUT" && find . -type f \
   ! -name 'flutter_service_worker.js' ! -name '*.symbols' ! -name '*.map' \
-  ! -name '.last_build_id' ! -path './canvaskit/skwasm*' \
+  ! -name '.last_build_id' ! -name 'update.html' ! -path './canvaskit/skwasm*' \
   ! -path './canvaskit/experimental_webparagraph/*' \
   | sed 's|^\./||' | sort | python3 -c \
   'import sys,json; print(json.dumps(["./"]+[l.strip() for l in sys.stdin if l.strip()]))')"

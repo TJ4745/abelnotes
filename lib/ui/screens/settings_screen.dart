@@ -1477,7 +1477,7 @@ class _AboutSection extends StatelessWidget {
   Future<void> _copyLog(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final log = await CrashLogger.read();
+    final log = CrashLogger.readNow();
     await Clipboard.setData(ClipboardData(
         text: log.isEmpty ? l10n.setReportProblemEmpty : log));
     messenger.showSnackBar(SnackBar(

@@ -50,8 +50,34 @@
   -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('flutter_service_worker.js').catch(function () {});
+      // Safari checks a registered worker for a new build only about once a
+      // day; ask on every launch so a deploy arrives on the next open.
+      navigator.serviceWorker.register('flutter_service_worker.js')
+          .then(function (r) { return r.update(); })
+          .catch(function () {});
     }
+  </script>
+  <!--
+    Fast short Apple Pencil strokes look like taps to iPadOS Safari: the second
+    of two quick ones was taken as a double tap and never reached the page,
+    so every other stroke vanished (flutter/flutter#172865). Cancelling the
+    stylus touchend stops the tap from counting; touchmove keeps Scribble off
+    the canvas. Finger touches are left alone. tldraw does the same (#5888).
+  -->
+  <script>
+    (function () {
+      function isPen(e) {
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].touchType === 'stylus') return true;
+        }
+        return false;
+      }
+      ['touchmove', 'touchend'].forEach(function (t) {
+        document.addEventListener(t, function (e) {
+          if (isPen(e)) e.preventDefault();
+        }, { capture: true, passive: false });
+      });
+    })();
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
