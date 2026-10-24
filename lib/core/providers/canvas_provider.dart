@@ -8967,6 +8967,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final st = state;
     if (st == null) return;
     final id = st.metadata.id;
+    // Deleted from this device: the server is empty because of us.
+    if (_ref.read(notebookListProvider.notifier).isDeletedHere(id)) return;
     final files = _ref.read(fileServiceProvider);
     await files.setNotebookLocalOnly(id, true);
     await files.clearDirtyPages(id);

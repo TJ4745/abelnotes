@@ -147,13 +147,34 @@ class NotebookListNotifier
       ValueNotifier<Set<String>>(const {});
   static const _deletedElsewhereKey = 'qs_deleted_elsewhere_v1';
 
+  /// Deleted on this device, id to remote stem: the server losing them is
+  /// our own doing, not another device's.
+  final Map<String, String> _deletedHere = {};
+
+  bool isDeletedHere(String id) => _deletedHere.containsKey(id);
+
   Future<void> loadDeletedElsewhere() async {
     final prefs = await SharedPreferences.getInstance();
-    deletedElsewhere.value =
+    final saved =
         (prefs.getStringList(_deletedElsewhereKey) ?? const <String>[]).toSet();
+    // A notebook since trashed here leaves nothing to warn about.
+    var kept = saved;
+    try {
+      final live = {
+        for (final r
+            in await _ref.read(fileServiceProvider).getAllNotebookMeta())
+          r['id'] as String
+      };
+      kept = saved.where(live.contains).toSet();
+    } catch (_) {}
+    deletedElsewhere.value = kept;
+    if (kept.length != saved.length) {
+      await prefs.setStringList(_deletedElsewhereKey, kept.toList());
+    }
   }
 
   Future<void> noteDeletedElsewhere(String id) async {
+    if (isDeletedHere(id)) return;
     final next = {...deletedElsewhere.value, id};
     deletedElsewhere.value = next;
     final prefs = await SharedPreferences.getInstance();
@@ -280,6 +301,7 @@ class NotebookListNotifier
     final serverless = _ref.read(syncServiceProvider)?.isOffline ?? true;
     final entries = <NotebookEntry>[];
     for (final row in allMeta) {
+      if (isDeletedHere(row['id'] as String)) continue;
       final e = _notebookEntryFromRow(row);
       entries.add(e.copyWith(
         isLocal: e.isLocal || pendingRoots.contains(e.metadata.id),
@@ -349,7 +371,8 @@ class NotebookListNotifier
     // the notebook straight back.
     final deletingPaths = {
       for (final rp in (await PendingRemoteDeletes.load()).values)
-        AppConfig.notebookStem(rp)
+        AppConfig.notebookStem(rp),
+      ..._deletedHere.values,
     };
     for (final file in remoteFiles) {
       final remotePath = '${AppConfig.defaultRemotePath}${file.name}';
@@ -1265,6 +1288,13 @@ class NotebookListNotifier
     final thumbs = _ref.read(thumbnailServiceProvider);
     final id = entry.metadata.id;
 
+    // Card goes now: the remote delete can take seconds, and reopening the
+    // notebook meanwhile reads the vanishing server as a delete elsewhere.
+    _deletedHere[id] = AppConfig.notebookStem(entry.remotePath);
+    state = AsyncValue.data(
+      (state.valueOrNull ?? []).where((e) => e.metadata.id != id).toList(),
+    );
+
     var remotePending = false;
     if (webdav != null) {
       try {
@@ -1279,17 +1309,23 @@ class NotebookListNotifier
     }
 
     // Soft-delete locally: preserve the .ncnote in the trash so it can be restored.
-    final trashId = await fileService.moveNotebookToTrash(entry.metadata.id);
+    final String? trashId;
+    try {
+      trashId = await fileService.moveNotebookToTrash(entry.metadata.id);
+    } catch (_) {
+      _deletedHere.remove(id);
+      if (mounted) await _loadFromLocalDb(fileService);
+      rethrow;
+    }
 
     // Best-effort thumbnail cleanup.
     try {
       await thumbs.deleteThumbnail(entry.metadata.id);
     } catch (_) {}
 
-    final current = state.valueOrNull ?? [];
-    state = AsyncValue.data(
-      current.where((e) => e.metadata.id != entry.metadata.id).toList(),
-    );
+    if (deletedElsewhere.value.contains(id)) {
+      await dismissDeletedElsewhere(id);
+    }
     unawaited(
         _ref.read(pagesTrayProvider.notifier).onNotebookDeleted(entry.metadata.id));
     return (trashId: trashId, remotePending: remotePending);
@@ -1341,6 +1377,7 @@ class NotebookListNotifier
     if (id != null) {
       // Wanted back: cancel a queued remote delete, and re-upload the root
       // the delete may already have removed.
+      _deletedHere.remove(id);
       await PendingRemoteDeletes.remove(id);
       await PendingRootUploads.add(id);
     }
@@ -1978,6 +2015,7 @@ class NotebookListNotifier
       final id = row['id'] as String?;
       final remotePath = row['remote_path'] as String?;
       if (id == null || remotePath == null || remotePath.isEmpty) continue;
+      if (isDeletedHere(id)) continue;
 
       // ── SAFETY: never retry-upload a notebook whose delta folder is
       // alive on the server. Re-uploading ALL pages as 'dirty' would
