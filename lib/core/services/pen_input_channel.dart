@@ -156,9 +156,7 @@ class LinuxPenPressure {
   static bool _serverPressureLogged = false;
 
   // ── evdev pressure source ───────────────────────────────────────
-  // GtkGestureStylus (the native bridge above) does NOT fire for many
-  // Gaomon/Huion/XP-Pen tablets on X11 — GDK classifies them as a
-  // generic pointer, so no penSample ever arrives. The kernel still
+  // Fallback when the display server sends no pressure axis. The kernel still
   // exposes the real pen pressure on the ABS_PRESSURE axis of the
   // tablet's /dev/input/eventN node, readable directly and immune to
   // toolkit/grab quirks (same approach the sibling PhotoJ app uses).

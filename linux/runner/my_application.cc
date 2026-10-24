@@ -43,42 +43,11 @@ static void send_pen_sample(MyApplication* self, gdouble x, gdouble y,
                                   nullptr, nullptr, nullptr);
 }
 
-// Pressure via GtkGestureStylus. Driven in the CAPTURE phase so we OBSERVE
-// the pen stream before FlView consumes it — without claiming the sequence,
-// so Flutter still gets the normal PointerEvent (with its correct x/y). We
-// only supply the pressure the embedder drops. NOTE: this gesture only fires
-// for devices GDK classifies as GDK_SOURCE_PEN/ERASER; many tablets
-// (Gaomon/Huion/XP-Pen) are classed as a generic pointer, so it never
-// activates for them — the source-agnostic GtkGestureDrag path below covers
-// those.
-static void forward_pen_sample(MyApplication* self, GtkGestureStylus* gesture,
-                               gdouble x, gdouble y) {
-  gdouble pressure = -1.0;
-  gdouble tilt_x = 0.0;
-  gdouble tilt_y = 0.0;
-  if (!gtk_gesture_stylus_get_axis(gesture, GDK_AXIS_PRESSURE, &pressure)) {
-    return;  // device exposes no pressure axis — nothing to enrich
-  }
-  gtk_gesture_stylus_get_axis(gesture, GDK_AXIS_XTILT, &tilt_x);
-  gtk_gesture_stylus_get_axis(gesture, GDK_AXIS_YTILT, &tilt_y);
-  send_pen_sample(self, x, y, pressure, tilt_x, tilt_y);
-}
-
-static void on_stylus_down(GtkGestureStylus* gesture, gdouble x, gdouble y,
-                           gpointer user_data) {
-  forward_pen_sample(MY_APPLICATION(user_data), gesture, x, y);
-}
-
-static void on_stylus_motion(GtkGestureStylus* gesture, gdouble x, gdouble y,
-                             gpointer user_data) {
-  forward_pen_sample(MY_APPLICATION(user_data), gesture, x, y);
-}
-
-// Permission-free pressure via the display server — the primary path.
+// Permission-free pressure via the display server.
 //
-// GtkGestureStylus above only fires for devices GDK tags as PEN/ERASER, and
-// GDK mislabels many tablets (e.g. Gaomon on X11) as a generic pointer, so
-// that gesture never activates for them. But GDK still builds each device's
+// Not GtkGestureStylus: in GTK 3 its handler returns TRUE for every event
+// carrying a device tool (Wacom on X11, any pen on Wayland), which in the
+// CAPTURE phase stops the event before FlView sees it. GDK builds each device's
 // axis list from its XInput2 valuators (X11) or the tablet-v2 protocol
 // (Wayland), independently of the source-type heuristic — so the "Abs
 // Pressure" axis is readable straight off the raw event with
@@ -263,21 +232,10 @@ static void my_application_activate(GApplication* application) {
       FL_METHOD_CODEC(codec));
   fl_method_channel_set_method_call_handler(self->window_channel,
                                             window_method_cb, self, nullptr);
-  // GtkGestureStylus only fires for GDK_SOURCE_PEN/ERASER devices and gives
-  // us gtk_gesture_stylus_get_axis(). CAPTURE phase = we see the events
-  // before FlView; we never claim the sequence, so propagation continues.
-  // The gesture is owned by the widget (lives for the app's lifetime).
-  GtkGesture* stylus = gtk_gesture_stylus_new(GTK_WIDGET(view));
-  gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(stylus),
-                                             GTK_PHASE_CAPTURE);
-  g_signal_connect(stylus, "down", G_CALLBACK(on_stylus_down), self);
-  g_signal_connect(stylus, "motion", G_CALLBACK(on_stylus_motion), self);
-
-  // Primary, permission-free pressure path: a source-agnostic GtkGestureDrag
-  // that reads the GDK pressure axis off its events (see forward_drag_pressure).
-  // Covers tablets GDK mislabels as a generic pointer, where the stylus gesture
-  // above never fires. CAPTURE phase + never claiming = observe without
-  // stealing the event from Flutter. Button 0 = react to any contact button.
+  // Permission-free pressure path: a source-agnostic GtkGestureDrag that
+  // reads the GDK pressure axis off its events (see forward_drag_pressure).
+  // CAPTURE phase + never claiming = observe without stealing the event from
+  // Flutter. Button 0 = react to any contact button.
   // The gesture is owned by the widget (lives for the app's lifetime).
   GtkGesture* pen_drag = gtk_gesture_drag_new(GTK_WIDGET(view));
   gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(pen_drag),
