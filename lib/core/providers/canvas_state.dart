@@ -521,7 +521,7 @@ class CanvasState {
     this.currentTool = CanvasTool.pen,
     this.toolSettings = const ToolSettings(),
     this.activeStroke = const [],
-    this.zoom = 2.0,
+    this.zoom = 1.0,
     this.panOffset = Offset.zero,
     this.undoStack = const [],
     this.redoStack = const [],

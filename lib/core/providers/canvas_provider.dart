@@ -1377,10 +1377,10 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     }
 
     // Scratch (infinite canvas) opens at 1:1 with the big page centred;
-    // ordinary A4 notebooks open at the default 2.0 zoom, horizontally
+    // ordinary A4 notebooks open at the default 1.0 zoom, horizontally
     // centred.
     final isScratch = metadata.paperType == AppConfig.infinitePaperType;
-    final initialZoom = isScratch ? 1.0 : 2.0;
+    const initialZoom = 1.0;
 
     // Pick an initial panOffset that centers the page if the viewport
     // size is already known. Previously we relied on setViewportSize to
@@ -1390,7 +1390,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final initialPan = _viewportSize != null
         ? (isScratch
             ? _scratchCenterPan(initialZoom)
-            : _centeredPanOffset(2.0)) // 2.0 = default zoom in CanvasState
+            : _centeredPanOffset(1.0)) // 1.0 = default zoom in CanvasState
         : Offset.zero;
 
     // ── Self-healing: repair duplicate fileNames before first render ──
@@ -4800,8 +4800,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
         clearLasso: true,
         lassoPath: [],
         clearSelectedElement: true,
-        zoom: 2.0,
-        panOffset: _centeredPanOffset(2.0),
+        zoom: 1.0,
+        panOffset: _centeredPanOffset(1.0),
       );
     } else {
       state = s.copyWith(
@@ -4894,8 +4894,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       document: updatedDoc,
       pages: updatedPages,
       currentPageIndex: insertIndex,
-      zoom: 2.0,
-      panOffset: _centeredPanOffset(2.0),
+      zoom: 1.0,
+      panOffset: _centeredPanOffset(1.0),
       isDirty: true,
     );
   }
@@ -4953,8 +4953,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       document: updatedDoc,
       pages: updatedPages,
       currentPageIndex: insertIdx,
-      zoom: 2.0,
-      panOffset: _centeredPanOffset(2.0),
+      zoom: 1.0,
+      panOffset: _centeredPanOffset(1.0),
       isDirty: true,
     );
   }
@@ -5117,8 +5117,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       pages: updatedPages,
       currentPageIndex: insertIndex,
       activeChapterId: chapterId,
-      zoom: 2.0,
-      panOffset: _centeredPanOffset(2.0),
+      zoom: 1.0,
+      panOffset: _centeredPanOffset(1.0),
       isDirty: true,
     );
   }
