@@ -138,6 +138,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // pointer-up / pointer-cancel.
   bool _barrelButtonOverride = false;
   CanvasTool? _barrelButtonPreviousTool;
+  // Override armed but the tip isn't touching: GTK reports a barrel press
+  // made while hovering as the pointer-down, before any contact.
+  bool _barrelAwaitingContact = false;
 
   // ── New chrome state (warm-paper redesign) ─────────────────────
   bool _popupOpen = false;
@@ -2681,20 +2684,17 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         _barrelButtonOverride = true;
         _barrelButtonPreviousTool = state.currentTool;
 
-        if (hasUpper) {
-          // Upper barrel → eraser. Honour the user's last picked
-          // sub-mode (per-stroke vs per-area) so the barrel feels
-          // like the eraser dock button.
-          final n = ref.read(canvasProvider.notifier);
-          n.setTool(n.lastEraserMode);
-          n.startStroke(pagePos, 0.5);
-        } else {
-          // Lower barrel → lasso. Switch tool and open the polygon
-          // at the contact point; the normal pointer-move branch
-          // will feed it.
-          ref.read(canvasProvider.notifier).setTool(CanvasTool.lasso);
-          _lassoPathNotifier.start(pagePos);
+        // Upper barrel → eraser, honouring the user's last picked sub-mode
+        // (per-stroke vs per-area) so it feels like the dock button.
+        // Lower barrel → lasso.
+        final n = ref.read(canvasProvider.notifier);
+        n.setTool(hasUpper ? n.lastEraserMode : CanvasTool.lasso);
+        if ((event.buttons & kPrimaryButton) == 0) {
+          // Pressed while hovering: switch now, act once the tip touches.
+          _barrelAwaitingContact = true;
+          return;
         }
+        _beginBarrelGesture(pagePos);
         return;
       }
     }
@@ -3024,6 +3024,56 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (kIsWeb && _isPen(event)) _lastStylusAt = DateTime.now();
     if (_activePointers >= 2) return;
 
+    final isPen = event.kind == PointerDeviceKind.stylus ||
+        event.kind == PointerDeviceKind.invertedStylus;
+    final contact = (event.buttons & kPrimaryButton) != 0;
+    if (isPen && _barrelButtonOverride) {
+      // While a barrel is held the tip can land and lift without a new
+      // pointer-down (GTK): only erase/select while it touches.
+      if (contact == _barrelAwaitingContact) {
+        _barrelAwaitingContact = !contact;
+        if (contact) {
+          _beginBarrelGesture(
+              _toPageCoords(event.localPosition, state, canvasSize));
+        } else {
+          _endBarrelGesture();
+        }
+        return;
+      }
+      if (_barrelAwaitingContact) return;
+    } else if (isPen &&
+        contact &&
+        (event.buttons & (kPrimaryStylusButton | kSecondaryStylusButton)) != 0) {
+      // Barrel pressed after the tip landed: finish what the tip was doing,
+      // then switch as if the barrel had been held from the start.
+      _onPointerUp(PointerUpEvent(
+        timeStamp: event.timeStamp,
+        pointer: event.pointer,
+        kind: event.kind,
+        device: event.device,
+        position: event.position,
+      ).transformed(event.transform));
+      // Commit now: a deferred stylus commit would take the next down as a
+      // continuation of the same stroke.
+      _flushDeferredCommit();
+      _onPointerDown(
+        PointerDownEvent(
+          timeStamp: event.timeStamp,
+          pointer: event.pointer,
+          kind: event.kind,
+          device: event.device,
+          position: event.position,
+          buttons: event.buttons,
+          pressure: event.pressure,
+          pressureMin: event.pressureMin,
+          pressureMax: event.pressureMax,
+        ).transformed(event.transform),
+        ref.read(canvasProvider) ?? state,
+        canvasSize,
+      );
+      return;
+    }
+
     // ── PDF text selection drag (device-aware; started in _onPointerDown) ──
     if (_pdfTextDragActive) {
       _ensurePdfTextSel(state)
@@ -3192,6 +3242,31 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     ref.read(canvasProvider.notifier).continueStroke(pagePos, pressure);
   }
 
+  /// Starts the barrel tool's gesture at the tip's contact point.
+  void _beginBarrelGesture(Offset pagePos) {
+    final n = ref.read(canvasProvider.notifier);
+    final live = ref.read(canvasProvider);
+    if (live?.currentTool == CanvasTool.lasso) {
+      if (live?.lassoSelection != null) n.clearSelection();
+      _lassoPathNotifier.start(pagePos);
+    } else {
+      n.startStroke(pagePos, 0.5);
+    }
+  }
+
+  /// The tip lifted with the barrel still held: commit, keep the override.
+  void _endBarrelGesture() {
+    final n = ref.read(canvasProvider.notifier);
+    final tool = ref.read(canvasProvider)?.currentTool;
+    if (tool == CanvasTool.eraserStandard || tool == CanvasTool.eraserStroke) {
+      n.endStroke();
+    } else if (tool == CanvasTool.lasso && _lassoPathNotifier.isActive) {
+      final pts = List<Offset>.from(_lassoPathNotifier.points);
+      _lassoPathNotifier.clear();
+      n.commitLassoPath(pts);
+    }
+  }
+
   void _onLassoPointerMove(Offset pagePos) {
     if (!_lassoPathNotifier.isActive) return;
     _lassoPathNotifier.addPoint(pagePos);
@@ -3278,6 +3353,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // so they fall right back into writing.
     if (_barrelButtonOverride) {
       _barrelButtonOverride = false;
+      _barrelAwaitingContact = false;
       final notif = ref.read(canvasProvider.notifier);
       final prevTool = _barrelButtonPreviousTool;
       final curTool = ref.read(canvasProvider)?.currentTool;
@@ -3532,6 +3608,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       // Restore barrel button state if needed before returning
       if (_barrelButtonOverride) {
         _barrelButtonOverride = false;
+        _barrelAwaitingContact = false;
         if (_barrelButtonPreviousTool != null) {
           ref.read(canvasProvider.notifier).setTool(_barrelButtonPreviousTool!);
           _barrelButtonPreviousTool = null;
@@ -3551,6 +3628,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // Restore barrel button state
     if (_barrelButtonOverride) {
       _barrelButtonOverride = false;
+      _barrelAwaitingContact = false;
       if (_barrelButtonPreviousTool != null) {
         ref.read(canvasProvider.notifier).setTool(_barrelButtonPreviousTool!);
         _barrelButtonPreviousTool = null;
