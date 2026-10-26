@@ -142,6 +142,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // Override armed but the tip isn't touching: GTK reports a barrel press
   // made while hovering as the pointer-down, before any contact.
   bool _barrelAwaitingContact = false;
+  int? _eraserHoverPointer;
 
   // ── New chrome state (warm-paper redesign) ─────────────────────
   bool _popupOpen = false;
@@ -964,6 +965,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     webTouchDevice.addListener(_onWebTouchDeviceChanged);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WidgetsBinding.instance.addObserver(this);
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onGlobalPointerEvent);
     _startAutoSave();
     _watchForPendingImport();
     // Hook the Windows-side pen-button bridge. No-op on other
@@ -1465,6 +1467,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     _dockFlyY.dispose();
     _hintMessenger?.hideCurrentSnackBar();
     WidgetsBinding.instance.removeObserver(this);
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(
+      _onGlobalPointerEvent,
+    );
     PenInputChannel.unregister();
     LinuxPenPressure.unregister();
     // Flush any pending deferred stylus commit before tearing down so a
@@ -2360,6 +2365,60 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
   bool _shouldTouchPan(PointerDeviceKind kind, CanvasTool tool) {
     return _effectiveStylusOnly() && kind == PointerDeviceKind.touch && _isDrawLikeTool(tool);
+  }
+
+  void _updateEraserHover(
+    PointerHoverEvent event,
+    CanvasState? state,
+    Size canvasSize,
+  ) {
+    final isStylus = event.kind == PointerDeviceKind.stylus ||
+        event.kind == PointerDeviceKind.invertedStylus;
+    final barrelEraser = isStylus &&
+        (event.kind == PointerDeviceKind.invertedStylus ||
+            (event.buttons & kSecondaryStylusButton) != 0);
+    final isEraserHover = state != null && isStylus &&
+        (_isEraserTool(state.currentTool) || barrelEraser);
+
+    if (isEraserHover) {
+      _eraserHoverPointer = event.pointer;
+      ref.read(canvasProvider.notifier).updateEraserCursorPosition(
+            _toPageCoords(_stylusLocalPosition(event), state, canvasSize),
+          );
+    } else if (_eraserHoverPointer == event.pointer) {
+      _clearEraserHover();
+    }
+  }
+
+  void _clearEraserHover() {
+    _eraserHoverPointer = null;
+    final state = ref.read(canvasProvider);
+    if (state != null && state.eraserCursorPos != null &&
+        !_activeStrokeNotifier.isActive && _activePointers == 0) {
+      ref.read(canvasProvider.notifier).clearEraserCursor();
+    }
+  }
+
+  void _onGlobalPointerEvent(PointerEvent event) {
+    if (event.pointer != _eraserHoverPointer) return;
+    if (event is PointerRemovedEvent) {
+      _clearEraserHover();
+      return;
+    }
+    if (event is PointerHoverEvent &&
+        (event.kind != PointerDeviceKind.stylus &&
+            event.kind != PointerDeviceKind.invertedStylus)) {
+      _clearEraserHover();
+      return;
+    }
+    if (event is PointerHoverEvent) {
+      final box = _canvasStackKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached ||
+          !Rect.fromLTWH(0, 0, box.size.width, box.size.height)
+              .contains(box.globalToLocal(event.position))) {
+        _clearEraserHover();
+      }
+    }
   }
 
   void _onPointerDown(PointerDownEvent event, CanvasState state, Size canvasSize) {
@@ -5284,6 +5343,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         return ValueListenableBuilder<MouseCursor?>(
           valueListenable: _mouseHoverCursor,
           builder: (context, hoverCursor, child) => MouseRegion(
+            onExit: (_) => _clearEraserHover(),
             // Mouse override (selection arrow / I-beam) when set; otherwise the
             // tool default so the pen keeps its drawing crosshair.
             cursor: hoverCursor ?? cursor,
@@ -5330,8 +5390,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                   },
                   onPointerHover: (e) {
                     _lastPointerWasMouse = e.kind == PointerDeviceKind.mouse;
-                    // Pen/stylus (or no state) → tool default cursor (crosshair).
                     final live = ref.read(canvasProvider);
+                    _updateEraserHover(e, live, canvasSize);
+                    // Pen/stylus (or no state) → tool default cursor (crosshair).
                     if (e.kind != PointerDeviceKind.mouse || live == null) {
                       if (_mouseHoverCursor.value != null) {
                         _mouseHoverCursor.value = null;
@@ -5673,9 +5734,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                                       tool: s.currentTool,
                                       pos: s.eraserCursorPos,
                                     )));
-                      if (eraserState == null ||
-                          !_isEraserTool(eraserState.tool) ||
-                          eraserState.pos == null) {
+                      if (eraserState == null || eraserState.pos == null) {
                         return const SizedBox.shrink();
                       }
                       final fullState = ref.read(canvasProvider);
