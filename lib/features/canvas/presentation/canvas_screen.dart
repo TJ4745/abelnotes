@@ -3674,7 +3674,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final state = ref.read(canvasProvider);
     if (state == null) return;
 
-    final newZoom = (_baseZoom * details.scale).clamp(0.3, 5.0);
+    final newZoom = (_baseZoom * details.scale).clamp(kMinZoom, kMaxZoom);
 
     // Use the CURRENT zoom (not _baseZoom) for pan calculation so the
     // focal-point anchor stays stable across incremental updates.
@@ -5228,7 +5228,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                       }
                       final oldZoom = live.zoom;
                       final zoomDelta = event.scrollDelta.dy > 0 ? 0.9 : 1.1;
-                      final newZoom = (oldZoom * zoomDelta).clamp(0.3, 5.0);
+                      final newZoom = (oldZoom * zoomDelta).clamp(kMinZoom, kMaxZoom);
                       final cursorPos = event.localPosition;
                       final newPan = live.panOffset +
                           (cursorPos - live.panOffset) * (1 - (newZoom / oldZoom));
@@ -5238,7 +5238,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                     } else if (event is PointerScaleEvent) {
                       // Trackpad pinch-to-zoom (may not fire on all platforms)
                       final oldZoom = live.zoom;
-                      final newZoom = (oldZoom * event.scale).clamp(0.3, 5.0);
+                      final newZoom = (oldZoom * event.scale).clamp(kMinZoom, kMaxZoom);
                       final cursorPos = event.localPosition;
                       final newPan = live.panOffset +
                           (cursorPos - live.panOffset) * (1 - (newZoom / oldZoom));

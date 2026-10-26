@@ -44,6 +44,10 @@ import 'package:abelnotes/core/providers/canvas_state.dart';
 // CanvasState, CanvasTool, PaperType, etc. without any change.
 export 'package:abelnotes/core/providers/canvas_state.dart';
 
+// Zoom limits
+const double kMinZoom = 0.25;
+const double kMaxZoom = 12.0;
+
 // ═══════════════════════════════════════════════════════════════
 //  CANVAS PROVIDER
 // ═══════════════════════════════════════════════════════════════
@@ -5184,7 +5188,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   void setZoom(double zoom) {
     if (state == null) return;
     _bumpInteract();
-    state = state!.copyWith(zoom: zoom.clamp(0.25, 12.0));
+    state = state!.copyWith(zoom: zoom.clamp(kMinZoom, kMaxZoom));
   }
 
   void setPanOffset(Offset offset) {
@@ -5197,7 +5201,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   void setZoomAndPan(double zoom, Offset pan) {
     if (state == null) return;
     _bumpInteract();
-    state = state!.copyWith(zoom: zoom.clamp(0.25, 5.0), panOffset: pan);
+    state = state!.copyWith(zoom: zoom.clamp(kMinZoom, kMaxZoom), panOffset: pan);
   }
 
   /// Last laid-out canvas viewport size (see [setViewportSize]) — needed by
@@ -8312,7 +8316,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     final fit = min(vp.width / page.width, vp.height / page.height);
     final target = min((vp.width - margin * 2) / page.width,
         (vp.height - margin * 2) / page.height);
-    final newZoom = (target / fit).clamp(0.3, 5.0).toDouble();
+    final newZoom = (target / fit).clamp(kMinZoom, kMaxZoom).toDouble();
     _bumpInteract();
     state = s.copyWith(
       zoom: newZoom,
