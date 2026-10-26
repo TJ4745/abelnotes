@@ -4,6 +4,7 @@
 #
 #   tool/build_web.sh                    # served from the site root
 #   tool/build_web.sh /abelnotes/        # served from a sub-path
+#   tool/build_web.sh / --dart-define=GOOGLE_WEB_CLIENT_ID=...   # extra flags
 #
 # What it adds on top of `flutter build web`:
 #   * --no-web-resources-cdn  CanvasKit and fonts are bundled, not fetched from
@@ -15,7 +16,7 @@ cd "$(dirname "$0")/.."
 BASE_HREF="${1:-/}"
 # SOURCE_MAPS=1 adds main.dart.js.map, to read stack traces from a device log.
 flutter build web --release --no-web-resources-cdn --base-href "$BASE_HREF" \
-  ${SOURCE_MAPS:+--source-maps}
+  ${SOURCE_MAPS:+--source-maps} "${@:2}"
 
 OUT=build/web
 BUILD_ID="$(date +%Y%m%d%H%M%S)"
