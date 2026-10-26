@@ -8294,7 +8294,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       fitToContent();
       return;
     }
-    state = state!.copyWith(zoom: 2.0, panOffset: _centeredPanOffset(2.0));
+    state = state!.copyWith(zoom: 1.0, panOffset: _centeredPanOffset(1.0));
   }
 
   /// Fit the current page vertically into the viewport. Computes the zoom
