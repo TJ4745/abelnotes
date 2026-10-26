@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:abelnotes/core/services/crash_logger.dart';
 import 'package:abelnotes/core/services/google_drive_store.dart';
@@ -100,9 +103,16 @@ class PluginGoogleSignInGateway implements GoogleSignInGateway {
 
 /// [GoogleSignInGateway] for the browser (Google Identity Services).
 ///
-/// The grant is the sign-in there, and tokens live about an hour in memory
-/// with no silent renewal: after that, or a reload, the user reconnects.
+/// The grant is the sign-in there, and Google gives the browser no way to
+/// renew it silently: a token lives about an hour. It is kept in the
+/// browser's storage until then, so a reload or a reopened tab doesn't ask
+/// again; after it expires the user reconnects.
 class WebGoogleSignInGateway implements GoogleSignInGateway {
+  static const _prefsKey = 'drive_web_token';
+
+  /// Google's tokens last 3600 s; stop using one a little before that.
+  static const _lifetime = Duration(minutes: 55);
+
   final String clientId;
   Future<void>? _init;
 
@@ -122,7 +132,15 @@ class WebGoogleSignInGateway implements GoogleSignInGateway {
   @override
   Future<void> signInAndAuthorize(List<String> scopes) async {
     await initialize();
-    await GoogleSignIn.instance.authorizationClient.authorizeScopes(scopes);
+    final authorization =
+        await GoogleSignIn.instance.authorizationClient.authorizeScopes(scopes);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _prefsKey,
+        jsonEncode({
+          't': authorization.accessToken,
+          'exp': DateTime.now().add(_lifetime).millisecondsSinceEpoch,
+        }));
   }
 
   @override
@@ -130,18 +148,38 @@ class WebGoogleSignInGateway implements GoogleSignInGateway {
     await initialize();
     final authorization = await GoogleSignIn.instance.authorizationClient
         .authorizationForScopes(scopes);
-    return authorization?.accessToken;
+    if (authorization != null) return authorization.accessToken;
+    return _storedToken();
+  }
+
+  Future<String?> _storedToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefsKey);
+    if (raw == null) return null;
+    try {
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      if (DateTime.now().millisecondsSinceEpoch < (m['exp'] as int)) {
+        return m['t'] as String;
+      }
+    } catch (_) {}
+    await prefs.remove(_prefsKey);
+    return null;
   }
 
   @override
-  Future<void> discardToken(String accessToken) => GoogleSignIn
-      .instance.authorizationClient
-      .clearAuthorizationToken(accessToken: accessToken);
+  Future<void> discardToken(String accessToken) async {
+    await GoogleSignIn.instance.authorizationClient
+        .clearAuthorizationToken(accessToken: accessToken);
+    if (await _storedToken() == accessToken) {
+      await (await SharedPreferences.getInstance()).remove(_prefsKey);
+    }
+  }
 
   @override
   Future<void> signOut() async {
     await initialize();
     await GoogleSignIn.instance.signOut();
+    await (await SharedPreferences.getInstance()).remove(_prefsKey);
   }
 }
 
