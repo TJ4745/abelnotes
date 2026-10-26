@@ -46,7 +46,7 @@ export 'package:abelnotes/core/providers/canvas_state.dart';
 
 // Zoom limits
 const double kMinZoom = 0.25;
-const double kMaxZoom = 12.0;
+const double kMaxZoom = 100.0;
 
 // ═══════════════════════════════════════════════════════════════
 //  CANVAS PROVIDER
