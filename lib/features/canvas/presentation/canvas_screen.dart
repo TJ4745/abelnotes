@@ -5088,10 +5088,10 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                           .map((c) => Color(c))
                           .toList(),
                       eraserSize: canvasState.toolSettings.eraserSize,
-                      onEraserSizeChanged: (s) {
-                        notifier.setToolSettings(
-                            canvasState.toolSettings.copyWith(eraserSize: s));
-                      },
+                      onEraserSizeChanged: (s) => notifier.setEraserSize(s),
+                      eraserDiameterPt: canvasState.toolSettings.eraserDiameterPt,
+                      onEraserDiameterChanged: (pt) =>
+                          notifier.setEraserDiameterPt(pt),
                       eraserPerStroke:
                           canvasState.currentTool == CanvasTool.eraserStroke,
                       onEraserPerStrokeChanged: (perStroke) {
@@ -6044,7 +6044,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     final pos = _toScreenCoords(state.eraserCursorPos!, state, canvasSize);
     // Radius is in page units (see _eraseAt): screen size needs the same
     // renderScale × zoom factor _toScreenCoords applies to the position.
-    final r = eraserSizeToRadius(state.toolSettings.eraserSize) *
+    final r = state.toolSettings.eraserRadius *
         _getRenderScale(state, canvasSize) *
         state.zoom;
     return Positioned(

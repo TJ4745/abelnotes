@@ -693,6 +693,8 @@ class HwToolPopup extends StatelessWidget {
   final List<Color> presetColors;
   final EraserSize? eraserSize;
   final ValueChanged<EraserSize>? onEraserSizeChanged;
+  final double? eraserDiameterPt;
+  final ValueChanged<double?>? onEraserDiameterChanged;
   final bool? eraserPerStroke;
   final ValueChanged<bool>? onEraserPerStrokeChanged;
   final VoidCallback onClose;
@@ -719,6 +721,8 @@ class HwToolPopup extends StatelessWidget {
     required this.onClose,
     this.eraserSize,
     this.onEraserSizeChanged,
+    this.eraserDiameterPt,
+    this.onEraserDiameterChanged,
     this.eraserPerStroke,
     this.onEraserPerStrokeChanged,
     this.penPresets,
@@ -957,6 +961,46 @@ class HwToolPopup extends StatelessWidget {
                 ],
               ],
             ),
+            const SizedBox(height: 10),
+            Builder(builder: (context) {
+              final presetDia =
+                  eraserSizeToRadius(eraserSize ?? EraserSize.medium) * 2;
+              final dia = eraserDiameterPt ?? presetDia;
+              final custom = eraserDiameterPt != null;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${dia.toStringAsFixed(1)} pt',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: p.ink2,
+                            fontWeight:
+                                custom ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (custom)
+                        GestureDetector(
+                          onTap: () => onEraserDiameterChanged?.call(null),
+                          child: Icon(Icons.restart_alt,
+                              size: 16, color: p.ink2),
+                        ),
+                    ],
+                  ),
+                  Slider(
+                    value: dia.clamp(1.0, 40.0).toDouble(),
+                    min: 1.0,
+                    max: 40.0,
+                    divisions: 78,
+                    onChanged: (v) => onEraserDiameterChanged?.call(v),
+                  ),
+                ],
+              );
+            }),
           ],
         ],
       ),

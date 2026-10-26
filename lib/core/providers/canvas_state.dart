@@ -142,6 +142,8 @@ class ToolSettings {
   final double opacity;
   final String shapeType;
   final EraserSize eraserSize;
+  /// Eraser diameter in pt (page units). null = use [eraserSize] preset.
+  final double? eraserDiameterPt;
   final bool shapeRecognition;
 
   const ToolSettings({
@@ -150,8 +152,14 @@ class ToolSettings {
     this.opacity = 1.0,
     this.shapeType = 'rectangle',
     this.eraserSize = EraserSize.medium,
+    this.eraserDiameterPt,
     this.shapeRecognition = true,
   });
+
+  /// Effective eraser radius in page units.
+  double get eraserRadius => eraserDiameterPt != null
+      ? (eraserDiameterPt! / 2).clamp(0.5, 50.0).toDouble()
+      : eraserSizeToRadius(eraserSize);
 
   ToolSettings copyWith({
     int? color,
@@ -159,6 +167,8 @@ class ToolSettings {
     double? opacity,
     String? shapeType,
     EraserSize? eraserSize,
+    double? eraserDiameterPt,
+    bool clearEraserDiameter = false,
     bool? shapeRecognition,
   }) =>
       ToolSettings(
@@ -167,6 +177,9 @@ class ToolSettings {
         opacity: opacity ?? this.opacity,
         shapeType: shapeType ?? this.shapeType,
         eraserSize: eraserSize ?? this.eraserSize,
+        eraserDiameterPt: clearEraserDiameter
+            ? null
+            : (eraserDiameterPt ?? this.eraserDiameterPt),
         shapeRecognition: shapeRecognition ?? this.shapeRecognition,
       );
 }
