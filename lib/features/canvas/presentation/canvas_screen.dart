@@ -2368,10 +2368,19 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   }
 
   void _updateEraserHover(
-    PointerHoverEvent event,
+    PointerEvent event,
     CanvasState? state,
     Size canvasSize,
   ) {
+    // Flutter normally reports pen proximity as PointerHoverEvent. On Linux,
+    // some tablet/Wayland stacks deliver the same out-of-contact samples as
+    // PointerMoveEvent with no buttons instead. The previous hover-only path
+    // therefore left the preview at its last position (often the DOWN point).
+    final isHoverSample = event is PointerHoverEvent ||
+        (event is PointerMoveEvent &&
+            (event.buttons == 0 || !_isStylusTipInContact(event)));
+    if (!isHoverSample) return;
+
     final isStylus = event.kind == PointerDeviceKind.stylus ||
         event.kind == PointerDeviceKind.invertedStylus;
     final barrelEraser = isStylus &&
@@ -2405,19 +2414,20 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       _clearEraserHover();
       return;
     }
-    if (event is PointerHoverEvent &&
-        (event.kind != PointerDeviceKind.stylus &&
-            event.kind != PointerDeviceKind.invertedStylus)) {
+    final isHoverSample = event is PointerHoverEvent ||
+        (event is PointerMoveEvent &&
+            (event.buttons == 0 || !_isStylusTipInContact(event)));
+    if (!isHoverSample) return;
+    if (event.kind != PointerDeviceKind.stylus &&
+        event.kind != PointerDeviceKind.invertedStylus) {
       _clearEraserHover();
       return;
     }
-    if (event is PointerHoverEvent) {
-      final box = _canvasStackKey.currentContext?.findRenderObject() as RenderBox?;
-      if (box == null || !box.attached ||
-          !Rect.fromLTWH(0, 0, box.size.width, box.size.height)
-              .contains(box.globalToLocal(event.position))) {
-        _clearEraserHover();
-      }
+    final box = _canvasStackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached ||
+        !Rect.fromLTWH(0, 0, box.size.width, box.size.height)
+            .contains(box.globalToLocal(event.position))) {
+      _clearEraserHover();
     }
   }
 
@@ -5386,6 +5396,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                   },
                   onPointerMove: (e) {
                     final live = ref.read(canvasProvider) ?? canvasState;
+                    _updateEraserHover(e, live, canvasSize);
                     _onPointerMove(e, live, canvasSize);
                   },
                   onPointerHover: (e) {
