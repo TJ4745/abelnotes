@@ -5184,7 +5184,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   void setZoom(double zoom) {
     if (state == null) return;
     _bumpInteract();
-    state = state!.copyWith(zoom: zoom.clamp(0.25, 5.0));
+    state = state!.copyWith(zoom: zoom.clamp(0.25, 12.0));
   }
 
   void setPanOffset(Offset offset) {
