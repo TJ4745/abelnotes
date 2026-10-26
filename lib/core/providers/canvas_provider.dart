@@ -301,6 +301,11 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   /// different object than `_lastSyncedPages[fileName]`, it was edited.
   Map<String, PageData> _lastSyncedPages = {};
 
+  /// Page objects known to be written in the local loose store, by identity.
+  /// The web pulled-save writes only pages that differ from these.
+  Map<String, PageData> _localStorePages = {};
+  Set<String> _localStoreAssets = {};
+
   /// Last-synced common ancestor for the document structure (page order +
   /// chapter assignments) and notebook metadata (title/chapters/paper/cover).
   /// These are the "base" side of a 3-way merge on pull: comparing the live
@@ -1462,6 +1467,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // and `pages` itself is treated as immutable: every edit replaces it
     // with a fresh map. So Map.of(...) was a defensive copy with no benefit.
     _lastSyncedPages = repaired.pages;
+    _localStorePages = Map.of(repaired.pages);
+    _localStoreAssets = {...?assets?.keys};
     // Seed the 3-way-merge baselines from the just-loaded on-disk state.
     _lastSyncedDocument = repaired.document;
     _lastSyncedMetadata = metadata;
@@ -2614,6 +2621,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     _forceReleaseSyncLock();
     _dirtyAssetKeys.clear();
     _lastSyncedPages = {};
+    _localStorePages = {};
+    _localStoreAssets = {};
     _lastSyncedDocument = null;
     _lastSyncedMetadata = null;
     _ghostEntryStrikes.clear();
@@ -7850,13 +7859,17 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   /// fresh blank page to the server, ending the corruption cycle.
   ///
   /// Caller is expected to trigger save() afterwards (or let auto-save fire).
-  bool repairMissingPageData(int docIndex) {
+  ///
+  /// Only pages in [goneFromServer] (from [checkMissingPages]) are repaired:
+  /// a blank uploaded over a page the server still has destroys it.
+  bool repairMissingPageData(int docIndex, Set<String> goneFromServer) {
     if (state == null) return false;
     final s = state!;
     if (docIndex < 0 || docIndex >= s.document.pages.length) return false;
     final entry = s.document.pages[docIndex];
     // Only repair if data is genuinely missing — do not clobber real content.
     if (s.pages.containsKey(entry.fileName)) return false;
+    if (!goneFromServer.contains(entry.fileName)) return false;
 
     final now = DateTime.now();
     // Inherit background from the surrounding page so the visual style of
@@ -7904,18 +7917,62 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     return count;
   }
 
-  /// Heal every page whose data is missing. Returns the number of pages
-  /// that were replaced with a blank.
-  int repairAllMissingPages() {
+  /// Heal every missing page in [goneFromServer]. Returns the number of
+  /// pages that were replaced with a blank.
+  int repairAllMissingPages(Set<String> goneFromServer) {
     final s = state;
     if (s == null) return 0;
     var repaired = 0;
     for (int i = 0; i < s.document.pages.length; i++) {
       if (!state!.pages.containsKey(s.document.pages[i].fileName)) {
-        if (repairMissingPageData(i)) repaired++;
+        if (repairMissingPageData(i, goneFromServer)) repaired++;
       }
     }
     return repaired;
+  }
+
+  /// Asks the server about the pages this device has no data for and starts
+  /// downloading the ones it still has. [goneFromServer] lists only pages a
+  /// complete server listing confirms absent; unreachable means unknown.
+  /// [noServer]: the notebook never syncs, so nothing else holds the pages.
+  Future<({bool reachable, bool noServer, Set<String> goneFromServer})>
+      checkMissingPages() async {
+    const unknown =
+        (reachable: false, noServer: false, goneFromServer: <String>{});
+    final s = state;
+    if (s == null) return unknown;
+    final missing = {
+      for (final e in s.document.pages)
+        if (!s.pages.containsKey(e.fileName)) e.fileName,
+    };
+    final syncService = _ref.read(syncServiceProvider);
+    final id = s.metadata.id;
+    if (syncService == null ||
+        syncService.isOffline ||
+        await _isLocalOnly(id)) {
+      return (reachable: false, noServer: true, goneFromServer: missing);
+    }
+    try {
+      final remote = await syncService.getRemoteChangeState(id);
+      if (remote.metaEtag == null) return unknown;
+      // A listing smaller than what this device holds is not trustworthy.
+      if (remote.pageEtags.length < s.document.pages.length - missing.length) {
+        return unknown;
+      }
+      final gone = {
+        for (final fn in missing)
+          if (!remote.pageEtags.containsKey(fn)) fn,
+      };
+      unawaited(CrashLogger.append(
+        '[MissingPages] ${missing.length} without local data, '
+        '${gone.length} absent on the server',
+      ));
+      if (gone.length < missing.length) unawaited(_pullRemoteChanges());
+      return (reachable: true, noServer: false, goneFromServer: gone);
+    } catch (e) {
+      unawaited(CrashLogger.append('[MissingPages] server check failed: $e'));
+      return unknown;
+    }
   }
 
   void deletePage(int index) {
@@ -8659,6 +8716,17 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
           );
           debugPrint('[Canvas] Seeded local store: ${allPages.length} pages, '
               '${s.assetBytes.length} assets');
+          if (state?.metadata.id == updatedMeta.id) {
+            _localStorePages = Map.of(s.pages);
+            _localStoreAssets = {...s.assetBytes.keys};
+          }
+        }
+        if (state?.metadata.id == updatedMeta.id) {
+          _localStorePages.addAll(changedPages);
+          for (final fn in deletedPages) {
+            _localStorePages.remove(fn);
+          }
+          _localStoreAssets.addAll(changedAssets.keys);
         }
 
         // Keep the DB row fresh. Preserve the delta ETag — upsert uses
@@ -9669,7 +9737,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
         //     looks unchanged). Without this check, strokes written on
         //     another device and uploaded into an existing page are
         //     invisible here until the meta ETag eventually moves.
-        final innerInconsistent = changeState.pageEtags.length > s.document.pages.length ||
+        // Also: a page the document lists and the server has, but whose data
+        // this device lacks (e.g. pulled into memory but never persisted).
+        final localDataMissing = s.document.pages.any((e) =>
+            !s.pages.containsKey(e.fileName) &&
+            changeState.pageEtags.containsKey(e.fileName));
+        final innerInconsistent = localDataMissing ||
+            changeState.pageEtags.length > s.document.pages.length ||
             (_lastPageEtags.isNotEmpty &&
                 changeState.pageEtags.keys.any((k) => !_lastPageEtags.containsKey(k))) ||
             (_lastPageEtags.isNotEmpty &&
@@ -11590,6 +11664,13 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       );
     }
 
+    // Web has no TransferableTypedData, so the isolate ZIP build below always
+    // threw there and pulled pages never reached the local store.
+    if (kIsWeb) {
+      await _savePulledIncremental(persistedMeta, persistedDoc, pages, assets);
+      return;
+    }
+
     try {
       final fileService = _ref.read(fileServiceProvider);
       final symbolLibs = state?.symbolLibraries
@@ -11635,9 +11716,86 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
         pageCount: metadata.pageCount,
         createdAt: metadata.createdAt,
       );
+      if (state?.metadata.id == metadata.id) {
+        _localStorePages = Map.of(pages);
+        _localStoreAssets = {...assets.keys};
+      }
       print('[Canvas] Saved pulled changes locally (${package.length} bytes)');
     } catch (e) {
       print('[Canvas] Failed to save pulled changes locally: $e');
+      unawaited(CrashLogger.append('[Pull] local save of pulled pages FAILED: $e'));
+    }
+  }
+
+  /// Writes only the pulled pages and assets the local store doesn't hold yet,
+  /// the same way save() persists edits.
+  Future<void> _savePulledIncremental(
+    NotebookMetadata metadata,
+    DocumentStructure document,
+    Map<String, PageData> pages,
+    Map<String, Uint8List> assets,
+  ) async {
+    try {
+      final fileService = _ref.read(fileServiceProvider);
+      final id = metadata.id;
+      final hasStore = await fileService.hasLooseStore(id);
+      final toWrite = <String, PageData>{
+        for (final e in pages.entries)
+          if (!hasStore || !identical(_localStorePages[e.key], e.value))
+            e.key: e.value,
+      };
+      final newAssets = <String, Uint8List>{
+        for (final e in assets.entries)
+          if (!hasStore || !_localStoreAssets.contains(e.key)) e.key: e.value,
+      };
+      final docFiles = document.pages.map((e) => e.fileName).toSet();
+      final deleted = [
+        for (final fn in _localStorePages.keys)
+          if (!pages.containsKey(fn) && !docFiles.contains(fn)) fn,
+      ];
+      final symbols = state?.symbolLibraries ?? const <SymbolLibrary>[];
+      final encoded = await _encodePagesWithCache(toWrite, evictMissing: false);
+      await fileService.saveNotebookIncremental(
+        id,
+        metadataJson:
+            Uint8List.fromList(utf8.encode(jsonEncode(metadata.toJson()))),
+        documentJson:
+            Uint8List.fromList(utf8.encode(jsonEncode(document.toJson()))),
+        changedPages: encoded,
+        changedAssets: newAssets,
+        deletedPages: deleted,
+        symbolsJson: symbols.isNotEmpty
+            ? Uint8List.fromList(utf8.encode(
+                jsonEncode(symbols.map((l) => l.toJson()).toList())))
+            : null,
+      );
+      if (state?.metadata.id == id) {
+        _localStorePages.addAll(toWrite);
+        for (final fn in deleted) {
+          _localStorePages.remove(fn);
+        }
+        _localStoreAssets.addAll(newAssets.keys);
+      }
+      await fileService.upsertNotebookMeta(
+        id: id,
+        title: metadata.title,
+        remotePath: state?.remotePath ?? '',
+        etag: _remoteMetaEtag,
+        localModifiedAt: DateTime.now(),
+        syncStatus: 'synced',
+        fileSize: await fileService.looseStoreSize(id),
+        coverColor: metadata.coverColor,
+        coverStyle: metadata.coverStyle,
+        paperType: metadata.paperType,
+        pageCount: metadata.pageCount,
+        createdAt: metadata.createdAt,
+      );
+      print('[Canvas] Saved pulled changes locally (incremental): '
+          '${encoded.length} pages, ${newAssets.length} assets, '
+          '${deleted.length} deleted');
+    } catch (e) {
+      print('[Canvas] Failed to save pulled changes locally: $e');
+      unawaited(CrashLogger.append('[Pull] local save of pulled pages FAILED: $e'));
     }
   }
 

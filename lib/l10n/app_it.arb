@@ -129,33 +129,11 @@
   },
   "csNoNotebookOpen": "Nessun taccuino aperto",
   "@csNoNotebookOpen": {},
-  "csMissingPageDataTitle": "Dati pagina mancanti",
-  "@csMissingPageDataTitle": {},
   "csNoPages": "Nessuna pagina",
   "@csNoPages": {},
-  "csMissingPagesBodyMany": "Questa pagina e altre {count} non sono state recuperate dal server. I file potrebbero essere andati persi durante una sincronizzazione parziale.",
-  "@csMissingPagesBodyMany": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "csMissingPageBodyOne": "Il file di questa pagina non è stato recuperato dal server. Potrebbe essere andato perso durante una sincronizzazione parziale.",
-  "@csMissingPageBodyOne": {},
   "csRetrySync": "Riprova sync",
   "@csRetrySync": {},
-  "csRestoreAsBlankPage": "Ripristina come pagina vuota",
-  "@csRestoreAsBlankPage": {},
-  "csRestoreAllMissing": "Ripristina tutte ({count})",
-  "@csRestoreAllMissing": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "csPagesRestoredBlank": "{count, plural, one{{count} pagina ripristinata come vuota} other{{count} pagine ripristinate come vuote}}",
+  "csPagesRestoredBlank": "{count, plural, one{{count} pagina sostituita con una vuota} other{{count} pagine sostituite con pagine vuote}}",
   "@csPagesRestoredBlank": {
     "placeholders": {
       "count": {
@@ -165,6 +143,72 @@
   },
   "csDeletePage": "Elimina pagina",
   "@csDeletePage": {},
+  "csMissingDownloadingTitle": "Scarico la pagina {page}…",
+  "@csMissingDownloadingTitle": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "csMissingDownloadingBody": "Questa pagina non è ancora su questo dispositivo. È sul server: la sto scaricando e apparirà qui appena pronta.",
+  "@csMissingDownloadingBody": {},
+  "csMissingOfflineTitle": "Pagina {page} non ancora scaricata",
+  "@csMissingOfflineTitle": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "csMissingOfflineBody": "Questa pagina non è ancora su questo dispositivo e il server ora non risponde. Riprovo da solo: apparirà appena torna la connessione. Nel frattempo non viene modificato niente.",
+  "@csMissingOfflineBody": {},
+  "csMissingGoneTitle": "Pagina {page} mancante",
+  "@csMissingGoneTitle": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "csMissingGoneBody": "Il file di questa pagina non c'è né su questo dispositivo né sul server. Se un altro dispositivo mostra ancora la pagina, aprila lì: verrà ricaricata sul server e tornerà anche qui.",
+  "@csMissingGoneBody": {},
+  "csMissingNoServerBody": "Il file di questa pagina non c'è su questo dispositivo e il quaderno non è sincronizzato con un server.",
+  "@csMissingNoServerBody": {},
+  "csMissingPreviousPage": "Pagina precedente",
+  "@csMissingPreviousPage": {},
+  "csMissingLastResort": "Solo se sei sicuro che la pagina non esiste più da nessuna parte:",
+  "@csMissingLastResort": {},
+  "csMissingReplaceAction": "Sostituisci con pagina vuota",
+  "@csMissingReplaceAction": {},
+  "csMissingReplaceAll": "Sostituisci tutte ({count})",
+  "@csMissingReplaceAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "csMissingReplaceConfirmTitle": "{count, plural, one{Sostituire la pagina con una vuota?} other{Sostituire {count} pagine con pagine vuote?}}",
+  "@csMissingReplaceConfirmTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "csMissingReplaceConfirmBody": "{count, plural, one{La pagina vuota viene sincronizzata su tutti i dispositivi. Se l'originale esiste ancora su un altro dispositivo, verrà sovrascritta.} other{Le pagine vuote vengono sincronizzate su tutti i dispositivi. Se gli originali esistono ancora su un altro dispositivo, verranno sovrascritti.}}",
+  "@csMissingReplaceConfirmBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "csMissingDeleteConfirmTitle": "Eliminare la pagina?",
+  "@csMissingDeleteConfirmTitle": {},
+  "csMissingDeleteConfirmBody": "La pagina viene tolta dal quaderno su tutti i dispositivi sincronizzati.",
+  "@csMissingDeleteConfirmBody": {},
   "csSyncProgressCount": "Sincronizzazione {done}/{total}",
   "@csSyncProgressCount": {
     "placeholders": {

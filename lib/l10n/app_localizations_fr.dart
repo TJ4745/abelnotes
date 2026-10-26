@@ -173,44 +173,101 @@ class AppLocalizationsFr extends AppLocalizations {
   String get csNoNotebookOpen => 'Aucun carnet ouvert';
 
   @override
-  String get csMissingPageDataTitle => 'Données de page manquantes';
-
-  @override
   String get csNoPages => 'Aucune page';
 
   @override
-  String csMissingPagesBodyMany(int count) {
-    return 'Cette page et $count autres n\'ont pas pu être récupérées depuis le serveur. Les fichiers ont peut-être été perdus lors d\'une synchronisation incomplète.';
-  }
-
-  @override
-  String get csMissingPageBodyOne =>
-      'Le fichier de cette page n\'a pas pu être récupéré depuis le serveur. Il a peut-être été perdu lors d\'une synchronisation incomplète.';
-
-  @override
   String get csRetrySync => 'Relancer la synchronisation';
-
-  @override
-  String get csRestoreAsBlankPage => 'Restaurer comme page vierge';
-
-  @override
-  String csRestoreAllMissing(int count) {
-    return 'Tout restaurer ($count)';
-  }
 
   @override
   String csPagesRestoredBlank(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pages restaurées comme vierges',
-      one: '$count page restaurée comme vierge',
+      other: '$count pages remplacées par des pages vierges',
+      one: '$count page remplacée par une page vierge',
     );
     return '$_temp0';
   }
 
   @override
   String get csDeletePage => 'Supprimer la page';
+
+  @override
+  String csMissingDownloadingTitle(int page) {
+    return 'Téléchargement de la page $page…';
+  }
+
+  @override
+  String get csMissingDownloadingBody =>
+      'Cette page n\'est pas encore sur cet appareil. Le serveur l\'a : elle se télécharge et apparaîtra ici dès qu\'elle sera prête.';
+
+  @override
+  String csMissingOfflineTitle(int page) {
+    return 'Page $page pas encore téléchargée';
+  }
+
+  @override
+  String get csMissingOfflineBody =>
+      'Cette page n\'est pas encore sur cet appareil et le serveur ne répond pas pour le moment. Une nouvelle tentative a lieu automatiquement ; la page apparaîtra dès le retour de la connexion. Rien n\'est modifié entre-temps.';
+
+  @override
+  String csMissingGoneTitle(int page) {
+    return 'Page $page manquante';
+  }
+
+  @override
+  String get csMissingGoneBody =>
+      'Le fichier de cette page n\'est ni sur cet appareil ni sur le serveur. Si un autre appareil affiche encore la page, ouvrez-la là-bas : elle sera de nouveau envoyée et reviendra aussi ici.';
+
+  @override
+  String get csMissingNoServerBody =>
+      'Le fichier de cette page n\'est pas sur cet appareil et le carnet n\'est synchronisé avec aucun serveur.';
+
+  @override
+  String get csMissingPreviousPage => 'Page précédente';
+
+  @override
+  String get csMissingLastResort =>
+      'Seulement si vous êtes sûr que la page n\'existe plus nulle part :';
+
+  @override
+  String get csMissingReplaceAction => 'Remplacer par une page vierge';
+
+  @override
+  String csMissingReplaceAll(int count) {
+    return 'Tout remplacer ($count)';
+  }
+
+  @override
+  String csMissingReplaceConfirmTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Remplacer $count pages par des pages vierges ?',
+      one: 'Remplacer la page par une page vierge ?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csMissingReplaceConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Les pages vierges sont synchronisées sur tous vos appareils. Si les originaux existent encore sur un autre appareil, ils seront écrasés.',
+      one:
+          'La page vierge est synchronisée sur tous vos appareils. Si l\'original existe encore sur un autre appareil, il sera écrasé.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csMissingDeleteConfirmTitle => 'Supprimer la page ?';
+
+  @override
+  String get csMissingDeleteConfirmBody =>
+      'La page est retirée du carnet sur tous les appareils synchronisés.';
 
   @override
   String csSyncProgressCount(int done, int total) {

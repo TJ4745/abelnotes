@@ -21,6 +21,7 @@ import 'package:abelnotes/core/providers/app_settings_provider.dart';
 import 'package:abelnotes/core/providers/auth_provider.dart'
     show webdavServiceProvider, nextcloudShareServiceProvider;
 import 'package:abelnotes/core/providers/canvas_provider.dart';
+import 'package:abelnotes/features/canvas/presentation/missing_page_view.dart';
 import 'package:abelnotes/core/providers/cross_notebook_clipboard_provider.dart';
 import 'package:abelnotes/core/providers/pending_import_provider.dart';
 import 'package:abelnotes/core/providers/preset_colors_provider.dart';
@@ -4795,13 +4796,15 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       //      fell back to a different page's content, which hid the bug
       //      entirely ("pagine di 1P inv uguali a Control's prima pagina").
       final doc = canvasState.document;
-      final isMissing = doc.pages.isNotEmpty &&
-          canvasState.currentPageIndex >= 0 &&
-          canvasState.currentPageIndex < doc.pages.length;
-      final missingCount = ref
-          .read(canvasProvider.notifier)
-          .missingPageCount();
-      final p = HwThemeScope.of(context);
+      final isMissing =
+          doc.pages.isNotEmpty && canvasState.currentPageIndex >= 0 && canvasState.currentPageIndex < doc.pages.length;
+      if (isMissing) {
+        return MissingPageView(
+          key: ValueKey(doc.pages[canvasState.currentPageIndex].fileName),
+          title: canvasState.metadata.title,
+          onBack: () => _onWillPop(),
+        );
+      }
       return Scaffold(
         appBar: AppBar(
           title: Text(canvasState.metadata.title),
@@ -4811,91 +4814,16 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
           ),
         ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isMissing ? Icons.warning_amber_rounded : Icons.description_outlined,
-                  size: 64,
-                  color: HwTheme.syncPending,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  isMissing
-                      ? AppLocalizations.of(context).csMissingPageDataTitle
-                      : AppLocalizations.of(context).csNoPages,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                if (isMissing) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    missingCount > 1
-                        ? AppLocalizations.of(context).csMissingPagesBodyMany(missingCount - 1)
-                        : AppLocalizations.of(context).csMissingPageBodyOne,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: p.ink2),
-                  ),
-                  const SizedBox(height: 24),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.refresh),
-                        label: Text(AppLocalizations.of(context).csRetrySync),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLocalizations.of(context).csSyncInProgress),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                      ),
-                      FilledButton.tonalIcon(
-                        icon: const Icon(Icons.note_add_outlined),
-                        label: Text(AppLocalizations.of(context).csRestoreAsBlankPage),
-                        onPressed: () async {
-                          final n = ref.read(canvasProvider.notifier);
-                          n.repairMissingPageData(canvasState.currentPageIndex);
-                          await n.save();
-                        },
-                      ),
-                      if (missingCount > 1)
-                        FilledButton.icon(
-                          icon: const Icon(Icons.auto_fix_high),
-                          label: Text(AppLocalizations.of(context).csRestoreAllMissing(missingCount)),
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final l10n = AppLocalizations.of(context);
-                            final n = ref.read(canvasProvider.notifier);
-                            final repaired = n.repairAllMissingPages();
-                            await n.save();
-                            if (!mounted) return;
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    l10n.csPagesRestoredBlank(repaired)),
-                              ),
-                            );
-                          },
-                        ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.delete_outline),
-                        label: Text(AppLocalizations.of(context).csDeletePage),
-                        onPressed: () {
-                          ref.read(canvasProvider.notifier)
-                              .deletePage(canvasState.currentPageIndex);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.description_outlined, size: 64, color: HwTheme.syncPending),
+              const SizedBox(height: 16),
+              Text(
+                AppLocalizations.of(context).csNoPages,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
         ),
       );

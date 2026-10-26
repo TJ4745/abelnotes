@@ -171,44 +171,101 @@ class AppLocalizationsPt extends AppLocalizations {
   String get csNoNotebookOpen => 'Nenhum caderno aberto';
 
   @override
-  String get csMissingPageDataTitle => 'Dados da página ausentes';
-
-  @override
   String get csNoPages => 'Nenhuma página';
 
   @override
-  String csMissingPagesBodyMany(int count) {
-    return 'Esta página e outras $count não foram recuperadas do servidor. Os arquivos podem ter sido perdidos em uma sincronização parcial.';
-  }
-
-  @override
-  String get csMissingPageBodyOne =>
-      'O arquivo desta página não foi recuperado do servidor. Ele pode ter sido perdido em uma sincronização parcial.';
-
-  @override
   String get csRetrySync => 'Tentar sincronizar de novo';
-
-  @override
-  String get csRestoreAsBlankPage => 'Restaurar como página em branco';
-
-  @override
-  String csRestoreAllMissing(int count) {
-    return 'Restaurar todas ($count)';
-  }
 
   @override
   String csPagesRestoredBlank(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count páginas restauradas em branco',
-      one: '$count página restaurada em branco',
+      other: '$count páginas substituídas por páginas em branco',
+      one: '$count página substituída por uma em branco',
     );
     return '$_temp0';
   }
 
   @override
   String get csDeletePage => 'Excluir página';
+
+  @override
+  String csMissingDownloadingTitle(int page) {
+    return 'Baixando a página $page…';
+  }
+
+  @override
+  String get csMissingDownloadingBody =>
+      'Esta página ainda não está neste dispositivo. O servidor a tem: ela está sendo baixada e aparecerá aqui quando estiver pronta.';
+
+  @override
+  String csMissingOfflineTitle(int page) {
+    return 'Página $page ainda não baixada';
+  }
+
+  @override
+  String get csMissingOfflineBody =>
+      'Esta página ainda não está neste dispositivo e o servidor não está respondendo agora. Nova tentativa automática; a página aparecerá quando a conexão voltar. Nada é alterado enquanto isso.';
+
+  @override
+  String csMissingGoneTitle(int page) {
+    return 'Página $page ausente';
+  }
+
+  @override
+  String get csMissingGoneBody =>
+      'O arquivo desta página não está neste dispositivo nem no servidor. Se outro dispositivo ainda mostra a página, abra-a lá: ela será enviada de novo e voltará aqui também.';
+
+  @override
+  String get csMissingNoServerBody =>
+      'O arquivo desta página não está neste dispositivo e o caderno não sincroniza com um servidor.';
+
+  @override
+  String get csMissingPreviousPage => 'Página anterior';
+
+  @override
+  String get csMissingLastResort =>
+      'Só se tiver certeza de que a página não existe mais em lugar nenhum:';
+
+  @override
+  String get csMissingReplaceAction => 'Substituir por página em branco';
+
+  @override
+  String csMissingReplaceAll(int count) {
+    return 'Substituir todas ($count)';
+  }
+
+  @override
+  String csMissingReplaceConfirmTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Substituir $count páginas por páginas em branco?',
+      one: 'Substituir a página por uma em branco?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csMissingReplaceConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'As páginas em branco são sincronizadas em todos os seus dispositivos. Se os originais ainda existirem em outro dispositivo, serão sobrescritos.',
+      one:
+          'A página em branco é sincronizada em todos os seus dispositivos. Se o original ainda existir em outro dispositivo, será sobrescrito.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csMissingDeleteConfirmTitle => 'Excluir a página?';
+
+  @override
+  String get csMissingDeleteConfirmBody =>
+      'A página é removida do caderno em todos os dispositivos sincronizados.';
 
   @override
   String csSyncProgressCount(int done, int total) {

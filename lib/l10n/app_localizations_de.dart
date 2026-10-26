@@ -172,44 +172,101 @@ class AppLocalizationsDe extends AppLocalizations {
   String get csNoNotebookOpen => 'Kein Notizbuch geöffnet';
 
   @override
-  String get csMissingPageDataTitle => 'Fehlende Seitendaten';
-
-  @override
   String get csNoPages => 'Keine Seiten';
 
   @override
-  String csMissingPagesBodyMany(int count) {
-    return 'Diese Seite und $count weitere konnten nicht vom Server geladen werden. Die Dateien sind möglicherweise bei einer unvollständigen Synchronisierung verloren gegangen.';
-  }
-
-  @override
-  String get csMissingPageBodyOne =>
-      'Die Datei dieser Seite konnte nicht vom Server geladen werden. Sie ist möglicherweise bei einer unvollständigen Synchronisierung verloren gegangen.';
-
-  @override
   String get csRetrySync => 'Synchronisierung wiederholen';
-
-  @override
-  String get csRestoreAsBlankPage => 'Als leere Seite wiederherstellen';
-
-  @override
-  String csRestoreAllMissing(int count) {
-    return 'Alle wiederherstellen ($count)';
-  }
 
   @override
   String csPagesRestoredBlank(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Seiten als leer wiederhergestellt',
-      one: '$count Seite als leer wiederhergestellt',
+      other: '$count Seiten durch leere Seiten ersetzt',
+      one: '$count Seite durch eine leere ersetzt',
     );
     return '$_temp0';
   }
 
   @override
   String get csDeletePage => 'Seite löschen';
+
+  @override
+  String csMissingDownloadingTitle(int page) {
+    return 'Seite $page wird heruntergeladen…';
+  }
+
+  @override
+  String get csMissingDownloadingBody =>
+      'Diese Seite ist noch nicht auf diesem Gerät. Der Server hat sie: Sie wird heruntergeladen und erscheint hier, sobald sie bereit ist.';
+
+  @override
+  String csMissingOfflineTitle(int page) {
+    return 'Seite $page noch nicht heruntergeladen';
+  }
+
+  @override
+  String get csMissingOfflineBody =>
+      'Diese Seite ist noch nicht auf diesem Gerät und der Server antwortet gerade nicht. Es wird automatisch erneut versucht; die Seite erscheint, sobald die Verbindung zurück ist. Bis dahin wird nichts verändert.';
+
+  @override
+  String csMissingGoneTitle(int page) {
+    return 'Seite $page fehlt';
+  }
+
+  @override
+  String get csMissingGoneBody =>
+      'Die Datei dieser Seite ist weder auf diesem Gerät noch auf dem Server. Wenn ein anderes Gerät die Seite noch zeigt, öffne sie dort: Sie wird erneut hochgeladen und erscheint auch hier wieder.';
+
+  @override
+  String get csMissingNoServerBody =>
+      'Die Datei dieser Seite ist nicht auf diesem Gerät, und das Notizbuch wird mit keinem Server synchronisiert.';
+
+  @override
+  String get csMissingPreviousPage => 'Vorherige Seite';
+
+  @override
+  String get csMissingLastResort =>
+      'Nur wenn du sicher bist, dass die Seite nirgends mehr existiert:';
+
+  @override
+  String get csMissingReplaceAction => 'Durch leere Seite ersetzen';
+
+  @override
+  String csMissingReplaceAll(int count) {
+    return 'Alle ersetzen ($count)';
+  }
+
+  @override
+  String csMissingReplaceConfirmTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Seiten durch leere Seiten ersetzen?',
+      one: 'Seite durch eine leere ersetzen?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csMissingReplaceConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die leeren Seiten werden auf alle Geräte synchronisiert. Existieren die Originale noch auf einem anderen Gerät, werden sie überschrieben.',
+      one:
+          'Die leere Seite wird auf alle Geräte synchronisiert. Existiert das Original noch auf einem anderen Gerät, wird es überschrieben.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csMissingDeleteConfirmTitle => 'Seite löschen?';
+
+  @override
+  String get csMissingDeleteConfirmBody =>
+      'Die Seite wird auf allen synchronisierten Geräten aus dem Notizbuch entfernt.';
 
   @override
   String csSyncProgressCount(int done, int total) {

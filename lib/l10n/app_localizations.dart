@@ -68,7 +68,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -91,11 +91,11 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
@@ -105,7 +105,7 @@ abstract class AppLocalizations {
     Locale('fr'),
     Locale('it'),
     Locale('pt'),
-    Locale('zh')
+    Locale('zh'),
   ];
 
   /// No description provided for @csPdfTextCopied.
@@ -396,29 +396,11 @@ abstract class AppLocalizations {
   /// **'Nessun taccuino aperto'**
   String get csNoNotebookOpen;
 
-  /// No description provided for @csMissingPageDataTitle.
-  ///
-  /// In it, this message translates to:
-  /// **'Dati pagina mancanti'**
-  String get csMissingPageDataTitle;
-
   /// No description provided for @csNoPages.
   ///
   /// In it, this message translates to:
   /// **'Nessuna pagina'**
   String get csNoPages;
-
-  /// No description provided for @csMissingPagesBodyMany.
-  ///
-  /// In it, this message translates to:
-  /// **'Questa pagina e altre {count} non sono state recuperate dal server. I file potrebbero essere andati persi durante una sincronizzazione parziale.'**
-  String csMissingPagesBodyMany(int count);
-
-  /// No description provided for @csMissingPageBodyOne.
-  ///
-  /// In it, this message translates to:
-  /// **'Il file di questa pagina non è stato recuperato dal server. Potrebbe essere andato perso durante una sincronizzazione parziale.'**
-  String get csMissingPageBodyOne;
 
   /// No description provided for @csRetrySync.
   ///
@@ -426,22 +408,10 @@ abstract class AppLocalizations {
   /// **'Riprova sync'**
   String get csRetrySync;
 
-  /// No description provided for @csRestoreAsBlankPage.
-  ///
-  /// In it, this message translates to:
-  /// **'Ripristina come pagina vuota'**
-  String get csRestoreAsBlankPage;
-
-  /// No description provided for @csRestoreAllMissing.
-  ///
-  /// In it, this message translates to:
-  /// **'Ripristina tutte ({count})'**
-  String csRestoreAllMissing(int count);
-
   /// No description provided for @csPagesRestoredBlank.
   ///
   /// In it, this message translates to:
-  /// **'{count, plural, one{{count} pagina ripristinata come vuota} other{{count} pagine ripristinate come vuote}}'**
+  /// **'{count, plural, one{{count} pagina sostituita con una vuota} other{{count} pagine sostituite con pagine vuote}}'**
   String csPagesRestoredBlank(int count);
 
   /// No description provided for @csDeletePage.
@@ -449,6 +419,96 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Elimina pagina'**
   String get csDeletePage;
+
+  /// No description provided for @csMissingDownloadingTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarico la pagina {page}…'**
+  String csMissingDownloadingTitle(int page);
+
+  /// No description provided for @csMissingDownloadingBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa pagina non è ancora su questo dispositivo. È sul server: la sto scaricando e apparirà qui appena pronta.'**
+  String get csMissingDownloadingBody;
+
+  /// No description provided for @csMissingOfflineTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Pagina {page} non ancora scaricata'**
+  String csMissingOfflineTitle(int page);
+
+  /// No description provided for @csMissingOfflineBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa pagina non è ancora su questo dispositivo e il server ora non risponde. Riprovo da solo: apparirà appena torna la connessione. Nel frattempo non viene modificato niente.'**
+  String get csMissingOfflineBody;
+
+  /// No description provided for @csMissingGoneTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Pagina {page} mancante'**
+  String csMissingGoneTitle(int page);
+
+  /// No description provided for @csMissingGoneBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Il file di questa pagina non c\'è né su questo dispositivo né sul server. Se un altro dispositivo mostra ancora la pagina, aprila lì: verrà ricaricata sul server e tornerà anche qui.'**
+  String get csMissingGoneBody;
+
+  /// No description provided for @csMissingNoServerBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Il file di questa pagina non c\'è su questo dispositivo e il quaderno non è sincronizzato con un server.'**
+  String get csMissingNoServerBody;
+
+  /// No description provided for @csMissingPreviousPage.
+  ///
+  /// In it, this message translates to:
+  /// **'Pagina precedente'**
+  String get csMissingPreviousPage;
+
+  /// No description provided for @csMissingLastResort.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo se sei sicuro che la pagina non esiste più da nessuna parte:'**
+  String get csMissingLastResort;
+
+  /// No description provided for @csMissingReplaceAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Sostituisci con pagina vuota'**
+  String get csMissingReplaceAction;
+
+  /// No description provided for @csMissingReplaceAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Sostituisci tutte ({count})'**
+  String csMissingReplaceAll(int count);
+
+  /// No description provided for @csMissingReplaceConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{Sostituire la pagina con una vuota?} other{Sostituire {count} pagine con pagine vuote?}}'**
+  String csMissingReplaceConfirmTitle(int count);
+
+  /// No description provided for @csMissingReplaceConfirmBody.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, one{La pagina vuota viene sincronizzata su tutti i dispositivi. Se l\'originale esiste ancora su un altro dispositivo, verrà sovrascritta.} other{Le pagine vuote vengono sincronizzate su tutti i dispositivi. Se gli originali esistono ancora su un altro dispositivo, verranno sovrascritti.}}'**
+  String csMissingReplaceConfirmBody(int count);
+
+  /// No description provided for @csMissingDeleteConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare la pagina?'**
+  String get csMissingDeleteConfirmTitle;
+
+  /// No description provided for @csMissingDeleteConfirmBody.
+  ///
+  /// In it, this message translates to:
+  /// **'La pagina viene tolta dal quaderno su tutti i dispositivi sincronizzati.'**
+  String get csMissingDeleteConfirmBody;
 
   /// No description provided for @csSyncProgressCount.
   ///
@@ -5514,14 +5574,14 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) => <String>[
-        'de',
-        'en',
-        'es',
-        'fr',
-        'it',
-        'pt',
-        'zh'
-      ].contains(locale.languageCode);
+    'de',
+    'en',
+    'es',
+    'fr',
+    'it',
+    'pt',
+    'zh',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -5547,8 +5607,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

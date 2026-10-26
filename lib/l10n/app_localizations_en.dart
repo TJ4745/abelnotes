@@ -170,44 +170,101 @@ class AppLocalizationsEn extends AppLocalizations {
   String get csNoNotebookOpen => 'No notebook open';
 
   @override
-  String get csMissingPageDataTitle => 'Missing page data';
-
-  @override
   String get csNoPages => 'No pages';
 
   @override
-  String csMissingPagesBodyMany(int count) {
-    return 'This page and $count others were not retrieved from the server. The files may have been lost during a partial sync.';
-  }
-
-  @override
-  String get csMissingPageBodyOne =>
-      'This page\'s file was not retrieved from the server. It may have been lost during a partial sync.';
-
-  @override
   String get csRetrySync => 'Retry sync';
-
-  @override
-  String get csRestoreAsBlankPage => 'Restore as blank page';
-
-  @override
-  String csRestoreAllMissing(int count) {
-    return 'Restore all ($count)';
-  }
 
   @override
   String csPagesRestoredBlank(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pages restored as blank',
-      one: '$count page restored as blank',
+      other: '$count pages replaced with blank pages',
+      one: '$count page replaced with a blank one',
     );
     return '$_temp0';
   }
 
   @override
   String get csDeletePage => 'Delete page';
+
+  @override
+  String csMissingDownloadingTitle(int page) {
+    return 'Downloading page $page…';
+  }
+
+  @override
+  String get csMissingDownloadingBody =>
+      'This page isn\'t on this device yet. The server has it: it\'s downloading and will appear here when ready.';
+
+  @override
+  String csMissingOfflineTitle(int page) {
+    return 'Page $page not downloaded yet';
+  }
+
+  @override
+  String get csMissingOfflineBody =>
+      'This page isn\'t on this device yet and the server isn\'t answering right now. It keeps retrying and the page will appear once you\'re back online. Nothing is changed in the meantime.';
+
+  @override
+  String csMissingGoneTitle(int page) {
+    return 'Page $page is missing';
+  }
+
+  @override
+  String get csMissingGoneBody =>
+      'This page\'s file is neither on this device nor on the server. If another device still shows the page, open it there: it will be uploaded again and come back here too.';
+
+  @override
+  String get csMissingNoServerBody =>
+      'This page\'s file isn\'t on this device, and the notebook doesn\'t sync with a server.';
+
+  @override
+  String get csMissingPreviousPage => 'Previous page';
+
+  @override
+  String get csMissingLastResort =>
+      'Only if you\'re sure the page no longer exists anywhere:';
+
+  @override
+  String get csMissingReplaceAction => 'Replace with a blank page';
+
+  @override
+  String csMissingReplaceAll(int count) {
+    return 'Replace all ($count)';
+  }
+
+  @override
+  String csMissingReplaceConfirmTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Replace $count pages with blank pages?',
+      one: 'Replace the page with a blank one?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csMissingReplaceConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The blank pages sync to all your devices. If the originals still exist on another device, they will be overwritten.',
+      one:
+          'The blank page syncs to all your devices. If the original still exists on another device, it will be overwritten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csMissingDeleteConfirmTitle => 'Delete the page?';
+
+  @override
+  String get csMissingDeleteConfirmBody =>
+      'The page is removed from the notebook on all synced devices.';
 
   @override
   String csSyncProgressCount(int done, int total) {

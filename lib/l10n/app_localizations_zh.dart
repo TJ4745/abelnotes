@@ -169,43 +169,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get csNoNotebookOpen => '没有打开的笔记本';
 
   @override
-  String get csMissingPageDataTitle => '缺少页面数据';
-
-  @override
   String get csNoPages => '没有页面';
 
   @override
-  String csMissingPagesBodyMany(int count) {
-    return '本页和另外 $count 页未能从服务器取回。这些文件可能在一次不完整的同步中丢失了。';
-  }
-
-  @override
-  String get csMissingPageBodyOne => '本页的文件未能从服务器取回。它可能在一次不完整的同步中丢失了。';
-
-  @override
   String get csRetrySync => '重新同步';
-
-  @override
-  String get csRestoreAsBlankPage => '恢复为空白页';
-
-  @override
-  String csRestoreAllMissing(int count) {
-    return '全部恢复（$count）';
-  }
 
   @override
   String csPagesRestoredBlank(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '已将 $count 页恢复为空白页',
-      one: '已将 $count 页恢复为空白页',
+      other: '已将 $count 个页面替换为空白页',
     );
     return '$_temp0';
   }
 
   @override
   String get csDeletePage => '删除页面';
+
+  @override
+  String csMissingDownloadingTitle(int page) {
+    return '正在下载第 $page 页…';
+  }
+
+  @override
+  String get csMissingDownloadingBody => '此页面尚未在本设备上。服务器上有此页面：正在下载，准备好后会显示在这里。';
+
+  @override
+  String csMissingOfflineTitle(int page) {
+    return '第 $page 页尚未下载';
+  }
+
+  @override
+  String get csMissingOfflineBody =>
+      '此页面尚未在本设备上，且服务器暂时没有响应。会自动重试，连接恢复后页面就会出现。在此期间不会修改任何内容。';
+
+  @override
+  String csMissingGoneTitle(int page) {
+    return '第 $page 页缺失';
+  }
+
+  @override
+  String get csMissingGoneBody =>
+      '此页面的文件既不在本设备上，也不在服务器上。如果其他设备仍显示此页面，请在那里打开它：它会重新上传并在这里恢复。';
+
+  @override
+  String get csMissingNoServerBody => '此页面的文件不在本设备上，且此笔记本未与服务器同步。';
+
+  @override
+  String get csMissingPreviousPage => '上一页';
+
+  @override
+  String get csMissingLastResort => '仅当你确定此页面在任何地方都已不存在时：';
+
+  @override
+  String get csMissingReplaceAction => '替换为空白页';
+
+  @override
+  String csMissingReplaceAll(int count) {
+    return '全部替换（$count）';
+  }
+
+  @override
+  String csMissingReplaceConfirmTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '将 $count 个页面替换为空白页？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csMissingReplaceConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '空白页会同步到你的所有设备。如果原页面仍存在于其他设备上，将被覆盖。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csMissingDeleteConfirmTitle => '删除此页面？';
+
+  @override
+  String get csMissingDeleteConfirmBody => '此页面将在所有已同步的设备上从笔记本中移除。';
 
   @override
   String csSyncProgressCount(int done, int total) {

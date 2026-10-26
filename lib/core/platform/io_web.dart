@@ -54,6 +54,10 @@ class WebFs {
   web.IDBDatabase? _db;
   Future<void> _writes = Future.value();
 
+  /// Last IndexedDB write failure (e.g. QuotaExceededError). The in-memory
+  /// tree still has the data, but it won't survive a reload.
+  String? lastPersistError;
+
   static Future<void> init() => instance._init();
 
   Future<void> _init() async {
@@ -115,8 +119,13 @@ class WebFs {
       final c = Completer<void>();
       final tx = db.transaction(_store.toJS, 'readwrite');
       tx.oncomplete = ((web.Event _) => c.complete()).toJS;
-      tx.onerror = ((web.Event _) => c.complete()).toJS;
-      tx.onabort = ((web.Event _) => c.complete()).toJS;
+      void failed(web.Event _) {
+        lastPersistError = tx.error?.name ?? 'transaction aborted';
+        print('[WebFs] IndexedDB write failed: $lastPersistError');
+        if (!c.isCompleted) c.complete();
+      }
+      tx.onerror = failed.toJS;
+      tx.onabort = failed.toJS;
       op(tx.objectStore(_store));
       return c.future;
     });
