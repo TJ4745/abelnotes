@@ -10,6 +10,34 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 /// Library sort strategies.
+enum StylusButtonAction {
+  none,
+  eraserStandard,
+  eraserStroke,
+  lasso,
+  highlighter,
+  pan,
+}
+
+extension StylusButtonActionTool on StylusButtonAction {
+  CanvasTool? get tool {
+    switch (this) {
+      case StylusButtonAction.none:
+        return null;
+      case StylusButtonAction.eraserStandard:
+        return CanvasTool.eraserStandard;
+      case StylusButtonAction.eraserStroke:
+        return CanvasTool.eraserStroke;
+      case StylusButtonAction.lasso:
+        return CanvasTool.lasso;
+      case StylusButtonAction.highlighter:
+        return CanvasTool.highlighter;
+      case StylusButtonAction.pan:
+        return CanvasTool.pan;
+    }
+  }
+}
+
 enum LibrarySortMode {
   modifiedDesc, // last-edited first (default)
   modifiedAsc,
@@ -147,6 +175,10 @@ class AppSettings {
   /// to get palm rejection.
   final bool? stylusOnlyDrawing;
 
+  /// Temporary tool mappings for the stylus side buttons.
+  final StylusButtonAction stylusPrimaryAction;
+  final StylusButtonAction stylusSecondaryAction;
+
   /// Stylus pressure sets the stroke width. Off, every pen stroke has the
   /// width a pressure-less device gets.
   final bool pressureWidth;
@@ -198,6 +230,8 @@ class AppSettings {
     this.toolDock = const ToolDockConfig(),
     this.mouseDraws = false,
     this.stylusOnlyDrawing,
+    this.stylusPrimaryAction = StylusButtonAction.eraserStandard,
+    this.stylusSecondaryAction = StylusButtonAction.lasso,
     this.pressureWidth = true,
     this.strokeContinuation = true,
     this.fillRecognizedShapes = true,
@@ -229,6 +263,8 @@ class AppSettings {
     ToolDockConfig? toolDock,
     bool? mouseDraws,
     bool? stylusOnlyDrawing,
+    StylusButtonAction? stylusPrimaryAction,
+    StylusButtonAction? stylusSecondaryAction,
     bool? pressureWidth,
     bool? strokeContinuation,
     bool? fillRecognizedShapes,
@@ -257,6 +293,8 @@ class AppSettings {
         toolDock: toolDock ?? this.toolDock,
         mouseDraws: mouseDraws ?? this.mouseDraws,
         stylusOnlyDrawing: stylusOnlyDrawing ?? this.stylusOnlyDrawing,
+        stylusPrimaryAction: stylusPrimaryAction ?? this.stylusPrimaryAction,
+        stylusSecondaryAction: stylusSecondaryAction ?? this.stylusSecondaryAction,
         pressureWidth: pressureWidth ?? this.pressureWidth,
         strokeContinuation: strokeContinuation ?? this.strokeContinuation,
         fillRecognizedShapes: fillRecognizedShapes ?? this.fillRecognizedShapes,
@@ -302,6 +340,14 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       final theme = ThemeMode.values.firstWhere(
         (m) => m.name == (map['theme'] as String?),
         orElse: () => ThemeMode.system,
+      );
+      final stylusPrimaryAction = StylusButtonAction.values.firstWhere(
+        (a) => a.name == (map['stylus_primary'] as String?),
+        orElse: () => StylusButtonAction.eraserStandard,
+      );
+      final stylusSecondaryAction = StylusButtonAction.values.firstWhere(
+        (a) => a.name == (map['stylus_secondary'] as String?),
+        orElse: () => StylusButtonAction.lasso,
       );
 
       final toolPresetsRaw =
@@ -357,6 +403,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
         toolDock: dock,
         mouseDraws: map['mouse_draws'] as bool? ?? false,
         stylusOnlyDrawing: map['stylus_only_drawing'] as bool?,
+        stylusPrimaryAction: stylusPrimaryAction,
+        stylusSecondaryAction: stylusSecondaryAction,
         pressureWidth: map['pressure_width'] as bool? ?? true,
         strokeContinuation: map['stroke_continuation'] as bool? ?? true,
         fillRecognizedShapes: map['fill_shapes'] as bool? ?? true,
@@ -393,6 +441,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
         'mouse_draws': state.mouseDraws,
         if (state.stylusOnlyDrawing != null)
           'stylus_only_drawing': state.stylusOnlyDrawing,
+        'stylus_primary': state.stylusPrimaryAction.name,
+        'stylus_secondary': state.stylusSecondaryAction.name,
         'pressure_width': state.pressureWidth,
         'stroke_continuation': state.strokeContinuation,
         'fill_shapes': state.fillRecognizedShapes,
@@ -473,6 +523,16 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
 
   void setStylusOnlyDrawing(bool v) {
     state = state.copyWith(stylusOnlyDrawing: v);
+    _persist();
+  }
+
+  void setStylusPrimaryAction(StylusButtonAction action) {
+    state = state.copyWith(stylusPrimaryAction: action);
+    _persist();
+  }
+
+  void setStylusSecondaryAction(StylusButtonAction action) {
+    state = state.copyWith(stylusSecondaryAction: action);
     _persist();
   }
 

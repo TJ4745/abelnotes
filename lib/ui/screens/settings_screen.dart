@@ -581,12 +581,25 @@ class _GeneralSection extends ConsumerWidget {
   }
 }
 
+// TODO: localize these stylus action labels.
+const Map<StylusButtonAction, String> _stylusActionLabels = {
+  StylusButtonAction.none: 'None',
+  StylusButtonAction.eraserStandard: 'Standard eraser',
+  StylusButtonAction.eraserStroke: 'Stroke eraser',
+  StylusButtonAction.lasso: 'Lasso',
+  StylusButtonAction.highlighter: 'Highlighter',
+  StylusButtonAction.pan: 'Pan',
+};
+
+String _stylusActionLabel(StylusButtonAction action) =>
+    _stylusActionLabels[action]!;
+
 class _InputSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final override = ref.watch(
-        appSettingsProvider.select((s) => s.stylusOnlyDrawing));
+    final settings = ref.watch(appSettingsProvider.select((s) => s));
+    final override = settings.stylusOnlyDrawing;
     // Off by default everywhere: a finger draws the armed tool, and the
     // editor's pan tool is the "don't draw" state. This switch is the
     // palm-rejection opt-in for people who write with a stylus.
@@ -609,6 +622,42 @@ class _InputSection extends ConsumerWidget {
                 onChanged: (v) => ref
                     .read(appSettingsProvider.notifier)
                     .setStylusOnlyDrawing(v))),
+        _Row(
+          title: 'Primary stylus button',
+          control: DropdownButton<StylusButtonAction>(
+            value: settings.stylusPrimaryAction,
+            items: StylusButtonAction.values
+                .map((action) => DropdownMenuItem(
+                      value: action,
+                      child: Text(_stylusActionLabel(action)),
+                    ))
+                .toList(),
+            onChanged: (action) {
+              if (action != null) {
+                ref.read(appSettingsProvider.notifier)
+                    .setStylusPrimaryAction(action);
+              }
+            },
+          ),
+        ),
+        _Row(
+          title: 'Secondary stylus button',
+          control: DropdownButton<StylusButtonAction>(
+            value: settings.stylusSecondaryAction,
+            items: StylusButtonAction.values
+                .map((action) => DropdownMenuItem(
+                      value: action,
+                      child: Text(_stylusActionLabel(action)),
+                    ))
+                .toList(),
+            onChanged: (action) {
+              if (action != null) {
+                ref.read(appSettingsProvider.notifier)
+                    .setStylusSecondaryAction(action);
+              }
+            },
+          ),
+        ),
         _Row(
             title: l10n.setPressureThickness,
             sub: l10n.setPressureThicknessSub,
