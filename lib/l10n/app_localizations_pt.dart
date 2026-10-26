@@ -1717,6 +1717,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Seus cadernos ficam neste dispositivo. Conecte o seu servidor ou o Google Drive para tê-los em todos os lugares — pode fazer isso quando quiser.';
 
   @override
+  String get libLocalOnlyBodyWeb =>
+      'Seus cadernos ficam neste navegador. Exporte os que quiser manter ou conecte o Google Drive para tê-los em todos os lugares. O Safari pode apagar os dados de sites não usados há alguns dias, a menos que você adicione o app à tela de início.';
+
+  @override
   String get libKeepOnDevice => 'Manter somente neste dispositivo';
 
   @override
@@ -3047,6 +3051,14 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get qsReauthBanner =>
       'O servidor não aceita mais o seu login. As suas alterações estão seguras neste dispositivo e serão sincronizadas depois de você entrar novamente.';
+
+  @override
+  String get qsDriveReauthBanner =>
+      'O Google Drive pede que você entre novamente. Suas alterações estão seguras neste dispositivo e serão sincronizadas assim que você entrar.';
+
+  @override
+  String get qsBrowserStorageFull =>
+      'Este navegador não tem mais espaço para salvar: suas últimas alterações podem se perder ao recarregar a página. Exporte seus cadernos ou libere espaço.';
 
   @override
   String get qsReauthAction => 'Entrar novamente';

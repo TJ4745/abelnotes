@@ -10,6 +10,7 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:web/web.dart' as web;
 
 import 'package:abelnotes/core/platform/io.dart' as io;
@@ -56,7 +57,7 @@ class WebFs {
 
   /// Last IndexedDB write failure (e.g. QuotaExceededError). The in-memory
   /// tree still has the data, but it won't survive a reload.
-  String? lastPersistError;
+  final ValueNotifier<String?> persistError = ValueNotifier(null);
 
   static Future<void> init() => instance._init();
 
@@ -120,8 +121,8 @@ class WebFs {
       final tx = db.transaction(_store.toJS, 'readwrite');
       tx.oncomplete = ((web.Event _) => c.complete()).toJS;
       void failed(web.Event _) {
-        lastPersistError = tx.error?.name ?? 'transaction aborted';
-        print('[WebFs] IndexedDB write failed: $lastPersistError');
+        persistError.value = tx.error?.name ?? 'transaction aborted';
+        print('[WebFs] IndexedDB write failed: ${persistError.value}');
         if (!c.isCompleted) c.complete();
       }
       tx.onerror = failed.toJS;

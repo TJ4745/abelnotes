@@ -489,6 +489,7 @@
   "libStorageFullBodyServer": "Die Notizbücher bleiben auf diesem Gerät sicher, können aber erst hochgeladen werden, wenn auf dem Server Platz frei wird.",
   "libLocalOnlyTitle": "Nur auf diesem Gerät",
   "libLocalOnlyBody": "Deine Notizbücher bleiben auf diesem Gerät. Verbinde deinen Server oder Google Drive, um sie überall zu haben — du kannst das jederzeit tun.",
+  "libLocalOnlyBodyWeb": "Deine Notizbücher bleiben in diesem Browser. Exportiere die, die du behalten willst, oder verbinde Google Drive, um sie überall zu haben. Safari kann die Daten von Websites löschen, die du einige Tage nicht genutzt hast, außer du fügst die App zum Home-Bildschirm hinzu.",
   "libKeepOnDevice": "Nur auf diesem Gerät behalten",
   "libResumeSync": "Dieses Notizbuch wieder synchronisieren",
   "libLocalOnlyBadge": "Nur hier",
@@ -848,6 +849,8 @@
   "qiPdfPageCount": "{count, plural, one{Das PDF hat 1 Seite.} other{Das PDF hat {count} Seiten.}}",
   "qiPdfStartOutOfRange": "{count, plural, one{Das PDF hat 1 Seite. Der Start liegt außerhalb des Bereichs.} other{Das PDF hat {count} Seiten. Der Start liegt außerhalb des Bereichs.}}",
   "qsReauthBanner": "Der Server akzeptiert deine Anmeldung nicht mehr. Deine Änderungen sind auf diesem Gerät sicher und werden nach erneuter Anmeldung synchronisiert.",
+  "qsDriveReauthBanner": "Google Drive verlangt eine erneute Anmeldung. Deine Änderungen sind auf diesem Gerät sicher und werden synchronisiert, sobald du dich anmeldest.",
+  "qsBrowserStorageFull": "Dieser Browser hat keinen Speicherplatz mehr: Deine letzten Änderungen könnten beim Neuladen der Seite verloren gehen. Exportiere deine Notizbücher oder gib Speicher frei.",
   "qsReauthAction": "Erneut anmelden",
   "qsDeletedElsewhere": "{count, plural, one{{count} Notizbuch wurde auf einem anderen Gerät gelöscht. Deine Kopie bleibt nur hier.} other{{count} Notizbücher wurden auf einem anderen Gerät gelöscht. Deine Kopien bleiben nur hier.}}",
   "@qsDeletedElsewhere": {

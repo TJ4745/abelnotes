@@ -1721,6 +1721,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deine Notizbücher bleiben auf diesem Gerät. Verbinde deinen Server oder Google Drive, um sie überall zu haben — du kannst das jederzeit tun.';
 
   @override
+  String get libLocalOnlyBodyWeb =>
+      'Deine Notizbücher bleiben in diesem Browser. Exportiere die, die du behalten willst, oder verbinde Google Drive, um sie überall zu haben. Safari kann die Daten von Websites löschen, die du einige Tage nicht genutzt hast, außer du fügst die App zum Home-Bildschirm hinzu.';
+
+  @override
   String get libKeepOnDevice => 'Nur auf diesem Gerät behalten';
 
   @override
@@ -3054,6 +3058,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get qsReauthBanner =>
       'Der Server akzeptiert deine Anmeldung nicht mehr. Deine Änderungen sind auf diesem Gerät sicher und werden nach erneuter Anmeldung synchronisiert.';
+
+  @override
+  String get qsDriveReauthBanner =>
+      'Google Drive verlangt eine erneute Anmeldung. Deine Änderungen sind auf diesem Gerät sicher und werden synchronisiert, sobald du dich anmeldest.';
+
+  @override
+  String get qsBrowserStorageFull =>
+      'Dieser Browser hat keinen Speicherplatz mehr: Deine letzten Änderungen könnten beim Neuladen der Seite verloren gehen. Exportiere deine Notizbücher oder gib Speicher frei.';
 
   @override
   String get qsReauthAction => 'Erneut anmelden';

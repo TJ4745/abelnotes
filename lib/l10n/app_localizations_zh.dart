@@ -1662,6 +1662,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '你的笔记本只留在这台设备上。连接你的服务器或 Google Drive，就能在任何地方使用 — 随时都可以连。';
 
   @override
+  String get libLocalOnlyBodyWeb =>
+      '你的笔记本保存在此浏览器中。导出你想保留的笔记本，或连接 Google Drive 以便随处使用。除非你将应用添加到主屏幕，否则 Safari 可能会清除几天未使用的网站数据。';
+
+  @override
   String get libKeepOnDevice => '只保留在这台设备上';
 
   @override
@@ -2946,6 +2950,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get qsReauthBanner => '服务器不再接受你的登录。你的更改安全保存在此设备上，重新登录后会同步。';
+
+  @override
+  String get qsDriveReauthBanner =>
+      'Google Drive 需要你重新登录。你的修改在本设备上是安全的，登录后会立即同步。';
+
+  @override
+  String get qsBrowserStorageFull =>
+      '此浏览器已没有空间保存：重新加载页面时，最近的修改可能会丢失。请导出笔记本或释放空间。';
 
   @override
   String get qsReauthAction => '重新登录';

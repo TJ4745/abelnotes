@@ -15,10 +15,9 @@ import 'package:abelnotes/l10n/app_localizations.dart';
 
 /// Whether this platform can run the Drive sign-in.
 ///
-/// Everything but the web: mobile uses the platform account sheet, desktop a
-/// loopback redirect. A browser-hosted build would need a third flow and
-/// doesn't have one.
-bool get driveSignInSupported => !kIsWeb;
+/// Mobile uses the platform account sheet, desktop a loopback redirect, the
+/// web Google's popup, which needs a web client id built in.
+bool get driveSignInSupported => !kIsWeb || googleWebClientId.isNotEmpty;
 
 /// Signs in to Google and points sync at Drive. Returns true on success.
 ///

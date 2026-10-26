@@ -27,24 +27,32 @@ final googleTokenStorageProvider = Provider<GoogleTokenStorage>(
 final googleOAuthClientProvider = Provider<GoogleOAuthClient>(
     (ref) => GoogleOAuthClient(ref.watch(googleOAuthConfigProvider)));
 
+/// OAuth client of type "Web application" whose JavaScript origins list the
+/// host serving the web build. Empty: Drive is unavailable in the browser.
+const googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+
 /// True where the platform's own account picker is the way in.
 ///
 /// Google turned browser redirects off for new Android OAuth clients, so on
 /// phones the native sheet isn't merely nicer — it is the flow that still
-/// works. Desktop has no such component and keeps the loopback flow.
+/// works. The browser has Google's own popup. Desktop has no such component
+/// and keeps the loopback flow.
 bool get useNativeGoogleSignIn =>
-    !kIsWeb && (io.Platform.isAndroid || io.Platform.isIOS);
+    kIsWeb || io.Platform.isAndroid || io.Platform.isIOS;
 
-/// Mobile: the platform owns the tokens, so there is nothing of ours to keep.
+/// Mobile and web: the platform owns the tokens, so there is nothing of ours
+/// to keep.
 final nativeGoogleAuthProvider = Provider<NativeGoogleAuth>((ref) =>
-    NativeGoogleAuth(PluginGoogleSignInGateway(
-      // Optional: Android matches its OAuth client by package name and
-      // signing certificate, so Drive works without a web client id.
-      serverClientId: const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID')
-              .isEmpty
-          ? null
-          : const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
-    )));
+    NativeGoogleAuth(kIsWeb
+        ? WebGoogleSignInGateway(googleWebClientId)
+        : PluginGoogleSignInGateway(
+            // Optional: Android matches its OAuth client by package name and
+            // signing certificate, so Drive works without a web client id.
+            serverClientId:
+                const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID').isEmpty
+                    ? null
+                    : const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
+          )));
 
 /// Desktop: this app holds the refresh token itself and renews it.
 final desktopGoogleAuthProvider = Provider<GoogleDriveAuth>((ref) =>

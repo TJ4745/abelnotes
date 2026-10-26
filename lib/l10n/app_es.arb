@@ -489,6 +489,7 @@
   "libStorageFullBodyServer": "Los cuadernos siguen a salvo en este dispositivo, pero no pueden subirse hasta que se libere espacio en el servidor.",
   "libLocalOnlyTitle": "Solo en este dispositivo",
   "libLocalOnlyBody": "Tus cuadernos se quedan en este dispositivo. Conecta tu servidor o Google Drive para tenerlos en todas partes: puedes hacerlo cuando quieras.",
+  "libLocalOnlyBodyWeb": "Tus cuadernos se quedan en este navegador. Exporta los que quieras conservar o conecta Google Drive para tenerlos en todas partes. Safari puede borrar los datos de los sitios que no usas desde hace unos días, salvo que añadas la app a la pantalla de inicio.",
   "libKeepOnDevice": "Mantener solo en este dispositivo",
   "libResumeSync": "Volver a sincronizar este cuaderno",
   "libLocalOnlyBadge": "Solo aquí",
@@ -848,6 +849,8 @@
   "qiPdfPageCount": "{count, plural, one{El PDF tiene 1 página.} other{El PDF tiene {count} páginas.}}",
   "qiPdfStartOutOfRange": "{count, plural, one{El PDF tiene 1 página. El inicio está fuera de rango.} other{El PDF tiene {count} páginas. El inicio está fuera de rango.}}",
   "qsReauthBanner": "El servidor ya no acepta tu inicio de sesión. Tus cambios están a salvo en este dispositivo y se sincronizarán cuando vuelvas a iniciar sesión.",
+  "qsDriveReauthBanner": "Google Drive te pide que vuelvas a iniciar sesión. Tus cambios están a salvo en este dispositivo y se sincronizan en cuanto lo hagas.",
+  "qsBrowserStorageFull": "Este navegador ya no tiene espacio para guardar: tus últimos cambios podrían perderse al recargar la página. Exporta tus cuadernos o libera espacio.",
   "qsReauthAction": "Iniciar sesión de nuevo",
   "qsDeletedElsewhere": "{count, plural, one{{count} cuaderno se eliminó en otro dispositivo. Tu copia se queda solo aquí.} other{{count} cuadernos se eliminaron en otro dispositivo. Tus copias se quedan solo aquí.}}",
   "@qsDeletedElsewhere": {

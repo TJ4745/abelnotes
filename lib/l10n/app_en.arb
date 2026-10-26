@@ -489,6 +489,7 @@
   "libStorageFullBodyServer": "Notebooks stay safe on this device, but they can't be uploaded until space is freed on the server.",
   "libLocalOnlyTitle": "This device only",
   "libLocalOnlyBody": "Your notebooks stay on this device. Connect your server or Google Drive to have them everywhere — you can do it whenever you like.",
+  "libLocalOnlyBodyWeb": "Your notebooks stay in this browser. Export the ones you want to keep, or connect Google Drive to have them everywhere. Safari may clear the data of sites you haven't used for a few days unless you add the app to your Home Screen.",
   "libKeepOnDevice": "Keep on this device only",
   "libResumeSync": "Sync this notebook again",
   "libLocalOnlyBadge": "This device only",
@@ -848,6 +849,8 @@
   "qiPdfPageCount": "{count, plural, one{The PDF has 1 page.} other{The PDF has {count} pages.}}",
   "qiPdfStartOutOfRange": "{count, plural, one{The PDF has 1 page. Start is out of range.} other{The PDF has {count} pages. Start is out of range.}}",
   "qsReauthBanner": "The server no longer accepts your sign-in. Your changes are safe on this device and will sync once you sign in again.",
+  "qsDriveReauthBanner": "Google Drive needs you to sign in again. Your changes are safe on this device and sync as soon as you do.",
+  "qsBrowserStorageFull": "This browser has no room left to save: your latest changes may be lost if the page reloads. Export your notebooks or free up space.",
   "qsReauthAction": "Sign in again",
   "qsDeletedElsewhere": "{count, plural, one{{count} notebook was deleted on another device. Your copy stays here only.} other{{count} notebooks were deleted on another device. Your copies stay here only.}}",
   "@qsDeletedElsewhere": {

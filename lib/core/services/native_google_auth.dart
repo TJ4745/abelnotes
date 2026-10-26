@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:abelnotes/core/services/crash_logger.dart';
@@ -97,6 +98,53 @@ class PluginGoogleSignInGateway implements GoogleSignInGateway {
   }
 }
 
+/// [GoogleSignInGateway] for the browser (Google Identity Services).
+///
+/// The grant is the sign-in there, and tokens live about an hour in memory
+/// with no silent renewal: after that, or a reload, the user reconnects.
+class WebGoogleSignInGateway implements GoogleSignInGateway {
+  final String clientId;
+  Future<void>? _init;
+
+  WebGoogleSignInGateway(this.clientId) {
+    // Load Google's script now: the consent popup must open while the click
+    // still counts as a user gesture, not after a network round trip.
+    initialize();
+  }
+
+  @override
+  Future<void> initialize() =>
+      _init ??= GoogleSignIn.instance.initialize(clientId: clientId);
+
+  @override
+  Future<bool> restoreSession() async => false;
+
+  @override
+  Future<void> signInAndAuthorize(List<String> scopes) async {
+    await initialize();
+    await GoogleSignIn.instance.authorizationClient.authorizeScopes(scopes);
+  }
+
+  @override
+  Future<String?> tokenIfAuthorized(List<String> scopes) async {
+    await initialize();
+    final authorization = await GoogleSignIn.instance.authorizationClient
+        .authorizationForScopes(scopes);
+    return authorization?.accessToken;
+  }
+
+  @override
+  Future<void> discardToken(String accessToken) => GoogleSignIn
+      .instance.authorizationClient
+      .clearAuthorizationToken(accessToken: accessToken);
+
+  @override
+  Future<void> signOut() async {
+    await initialize();
+    await GoogleSignIn.instance.signOut();
+  }
+}
+
 /// The user closed the account sheet. Not an error to report as a failure.
 class GoogleSignInCancelled implements Exception {
   @override
@@ -124,6 +172,10 @@ class NativeGoogleAuth implements DriveAuth {
   /// The last token handed out, so a 401 can name the one to discard.
   String? _lastToken;
 
+  /// Set when a request found no token, so the UI can offer to sign in again
+  /// (in the browser that is every hour and after every reload).
+  final ValueNotifier<bool> needsSignIn = ValueNotifier(false);
+
   NativeGoogleAuth(this._gateway);
 
   /// True when a silent token is available — the only proof that survives a
@@ -150,6 +202,7 @@ class NativeGoogleAuth implements DriveAuth {
   Future<void> signIn() async {
     try {
       await _gateway.signInAndAuthorize(_scopes);
+      needsSignIn.value = false;
     } on GoogleSignInException catch (e) {
       // Android's CredentialManager reports some configuration errors as a
       // cancellation and the plugin cannot tell them apart, so the code alone
@@ -163,7 +216,10 @@ class NativeGoogleAuth implements DriveAuth {
     }
   }
 
-  Future<void> signOut() => _gateway.signOut();
+  Future<void> signOut() async {
+    await _gateway.signOut();
+    needsSignIn.value = false;
+  }
 
   @override
   Future<String> accessToken({bool forceRefresh = false}) async {
@@ -180,6 +236,7 @@ class NativeGoogleAuth implements DriveAuth {
       // session either: restoring shows Android's One Tap sheet, and this
       // runs once per HTTP request during a sync. Doing it here made the
       // sheet reappear every couple of seconds and the app unusable.
+      needsSignIn.value = true;
       throw GoogleReauthRequired(
           'the platform has no Drive authorization for this account');
     }

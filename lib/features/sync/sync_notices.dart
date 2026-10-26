@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:abelnotes/core/platform/storage_health.dart'
+    if (dart.library.js_interop) 'package:abelnotes/core/platform/storage_health_web.dart';
+import 'package:abelnotes/core/providers/app_settings_provider.dart';
 import 'package:abelnotes/core/providers/auth_provider.dart';
 import 'package:abelnotes/core/providers/notebook_provider.dart';
 import 'package:abelnotes/core/providers/remote_store_provider.dart';
 import 'package:abelnotes/core/services/remote_store.dart';
 import 'package:abelnotes/core/services/sync_service.dart';
 import 'package:abelnotes/features/auth/login_screen.dart';
+import 'package:abelnotes/features/sync/drive_connect.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
 import 'package:abelnotes/ui/primitives/hw_button.dart';
 import 'package:abelnotes/ui/theme/hw_icons.dart';
@@ -92,8 +96,9 @@ class DeletedElsewhereNotice extends ConsumerWidget {
   }
 }
 
-/// Wraps the whole app: while the server rejects the saved credentials, a
-/// banner offers to sign in again, on every screen including the editor.
+/// Wraps the whole app: while the server rejects the saved credentials, or
+/// Drive has no token left, a banner offers to sign in again, on every screen
+/// including the editor.
 class ReauthBannerHost extends ConsumerWidget {
   final Widget child;
   const ReauthBannerHost({super.key, required this.child});
@@ -102,47 +107,85 @@ class ReauthBannerHost extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final show = ref.watch(needsReauthProvider);
     final creds = ref.watch(credentialsProvider);
-    final p = HwThemeScope.of(context);
+    final onDrive = useNativeGoogleSignIn &&
+        ref.watch(appSettingsProvider.select((s) => s.syncBackend)) ==
+            SyncBackend.drive;
     final l10n = AppLocalizations.of(context);
     // The banner slot is always there so the Navigator below keeps its place
     // in the tree (and its routes) when the banner comes and goes.
     return Column(
       children: [
-        if (!show || creds == null)
-          const SizedBox.shrink()
+        ValueListenableBuilder<String?>(
+          valueListenable: browserStorageError,
+          builder: (context, error, _) => error == null
+              ? const SizedBox.shrink()
+              : _ReauthBanner(text: l10n.qsBrowserStorageFull),
+        ),
+        if (onDrive)
+          ValueListenableBuilder<bool>(
+            valueListenable: ref.watch(nativeGoogleAuthProvider).needsSignIn,
+            builder: (context, needs, _) => !needs
+                ? const SizedBox.shrink()
+                : _ReauthBanner(
+                    text: l10n.qsDriveReauthBanner,
+                    action: l10n.qsReauthAction,
+                    // The dialog and the popup need the Navigator's context.
+                    onPressed: () {
+                      final nav = syncNavigatorKey.currentContext;
+                      if (nav != null) connectDrive(nav, ref);
+                    },
+                  ),
+          )
+        else if (show && creds != null)
+          _ReauthBanner(
+            text: l10n.qsReauthBanner,
+            action: l10n.qsReauthAction,
+            onPressed: () => syncNavigatorKey.currentState?.push(
+                MaterialPageRoute(builder: (_) => LoginScreen(reauth: creds))),
+          )
         else
-          Material(
-            color: Color.alphaBlend(
-                HwTheme.syncConflict.withValues(alpha: 0.14), p.paper1),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Row(
-                  children: [
-                    const HwIcon('cloud-off',
-                        size: 16, color: HwTheme.syncConflict),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(l10n.qsReauthBanner,
-                          style: TextStyle(fontSize: 13, color: p.ink0)),
-                    ),
-                    const SizedBox(width: 8),
-                    HwButton(
-                      label: l10n.qsReauthAction,
-                      style: HwButtonStyle.primary,
-                      onPressed: () => syncNavigatorKey.currentState?.push(
-                          MaterialPageRoute(
-                              builder: (_) => LoginScreen(reauth: creds))),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const SizedBox.shrink(),
         Expanded(child: child),
       ],
+    );
+  }
+}
+
+class _ReauthBanner extends StatelessWidget {
+  final String text;
+  final String? action;
+  final VoidCallback? onPressed;
+  const _ReauthBanner({required this.text, this.action, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = HwThemeScope.of(context);
+    return Material(
+      color: Color.alphaBlend(
+          HwTheme.syncConflict.withValues(alpha: 0.14), p.paper1),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
+              const HwIcon('cloud-off', size: 16, color: HwTheme.syncConflict),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text, style: TextStyle(fontSize: 13, color: p.ink0)),
+              ),
+              if (action != null) ...[
+                const SizedBox(width: 8),
+                HwButton(
+                  label: action!,
+                  style: HwButtonStyle.primary,
+                  onPressed: onPressed,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

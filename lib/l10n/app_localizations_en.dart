@@ -1712,6 +1712,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your notebooks stay on this device. Connect your server or Google Drive to have them everywhere — you can do it whenever you like.';
 
   @override
+  String get libLocalOnlyBodyWeb =>
+      'Your notebooks stay in this browser. Export the ones you want to keep, or connect Google Drive to have them everywhere. Safari may clear the data of sites you haven\'t used for a few days unless you add the app to your Home Screen.';
+
+  @override
   String get libKeepOnDevice => 'Keep on this device only';
 
   @override
@@ -3031,6 +3035,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get qsReauthBanner =>
       'The server no longer accepts your sign-in. Your changes are safe on this device and will sync once you sign in again.';
+
+  @override
+  String get qsDriveReauthBanner =>
+      'Google Drive needs you to sign in again. Your changes are safe on this device and sync as soon as you do.';
+
+  @override
+  String get qsBrowserStorageFull =>
+      'This browser has no room left to save: your latest changes may be lost if the page reloads. Export your notebooks or free up space.';
 
   @override
   String get qsReauthAction => 'Sign in again';

@@ -68,7 +68,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -91,11 +91,11 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
@@ -105,7 +105,7 @@ abstract class AppLocalizations {
     Locale('fr'),
     Locale('it'),
     Locale('pt'),
-    Locale('zh'),
+    Locale('zh')
   ];
 
   /// No description provided for @csPdfTextCopied.
@@ -2790,6 +2790,12 @@ abstract class AppLocalizations {
   /// **'I tuoi taccuini restano su questo dispositivo. Collega il tuo server o Google Drive per averli su tutti i dispositivi — puoi farlo quando vuoi.'**
   String get libLocalOnlyBody;
 
+  /// No description provided for @libLocalOnlyBodyWeb.
+  ///
+  /// In it, this message translates to:
+  /// **'I tuoi quaderni restano in questo browser. Esporta quelli che vuoi tenere, o collega Google Drive per averli ovunque. Safari può cancellare i dati dei siti non usati da qualche giorno, a meno che tu non aggiunga l\'app alla schermata Home.'**
+  String get libLocalOnlyBodyWeb;
+
   /// No description provided for @libKeepOnDevice.
   ///
   /// In it, this message translates to:
@@ -4902,6 +4908,18 @@ abstract class AppLocalizations {
   /// **'Il server non accetta più il tuo accesso. Le modifiche restano al sicuro su questo dispositivo e si sincronizzeranno dopo il nuovo accesso.'**
   String get qsReauthBanner;
 
+  /// No description provided for @qsDriveReauthBanner.
+  ///
+  /// In it, this message translates to:
+  /// **'Google Drive chiede di accedere di nuovo. Le modifiche sono al sicuro su questo dispositivo e si sincronizzano appena accedi.'**
+  String get qsDriveReauthBanner;
+
+  /// No description provided for @qsBrowserStorageFull.
+  ///
+  /// In it, this message translates to:
+  /// **'Il browser non ha più spazio per salvare: le ultime modifiche potrebbero andare perse ricaricando la pagina. Esporta i quaderni o libera spazio.'**
+  String get qsBrowserStorageFull;
+
   /// No description provided for @qsReauthAction.
   ///
   /// In it, this message translates to:
@@ -5574,14 +5592,14 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) => <String>[
-    'de',
-    'en',
-    'es',
-    'fr',
-    'it',
-    'pt',
-    'zh',
-  ].contains(locale.languageCode);
+        'de',
+        'en',
+        'es',
+        'fr',
+        'it',
+        'pt',
+        'zh'
+      ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -5607,9 +5625,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

@@ -489,6 +489,7 @@
   "libStorageFullBodyServer": "Les carnets restent en sécurité sur cet appareil, mais ne peuvent pas être envoyés tant que de l'espace n'est pas libéré sur le serveur.",
   "libLocalOnlyTitle": "Sur cet appareil uniquement",
   "libLocalOnlyBody": "Vos carnets restent sur cet appareil. Connectez votre serveur ou Google Drive pour les retrouver partout — vous pouvez le faire à tout moment.",
+  "libLocalOnlyBodyWeb": "Vos carnets restent dans ce navigateur. Exportez ceux que vous voulez garder, ou connectez Google Drive pour les avoir partout. Safari peut effacer les données des sites inutilisés depuis quelques jours, sauf si vous ajoutez l'app à l'écran d'accueil.",
   "libKeepOnDevice": "Garder uniquement sur cet appareil",
   "libResumeSync": "Synchroniser à nouveau ce carnet",
   "libLocalOnlyBadge": "Ici uniquement",
@@ -848,6 +849,8 @@
   "qiPdfPageCount": "{count, plural, one{Le PDF compte 1 page.} other{Le PDF compte {count} pages.}}",
   "qiPdfStartOutOfRange": "{count, plural, one{Le PDF compte 1 page. Le début est hors intervalle.} other{Le PDF compte {count} pages. Le début est hors intervalle.}}",
   "qsReauthBanner": "Le serveur n'accepte plus votre connexion. Vos modifications sont en sécurité sur cet appareil et seront synchronisées après une nouvelle connexion.",
+  "qsDriveReauthBanner": "Google Drive vous demande de vous reconnecter. Vos modifications sont en sécurité sur cet appareil et se synchronisent dès que vous le faites.",
+  "qsBrowserStorageFull": "Ce navigateur n'a plus de place pour enregistrer : vos dernières modifications pourraient être perdues si la page se recharge. Exportez vos carnets ou libérez de l'espace.",
   "qsReauthAction": "Se reconnecter",
   "qsDeletedElsewhere": "{count, plural, one{{count} carnet a été supprimé sur un autre appareil. Votre copie reste uniquement ici.} other{{count} carnets ont été supprimés sur un autre appareil. Vos copies restent uniquement ici.}}",
   "@qsDeletedElsewhere": {

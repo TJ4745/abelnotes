@@ -3387,7 +3387,7 @@ class _LocalOnlyNotice extends ConsumerWidget {
               style: TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w600, color: p.ink0)),
           const SizedBox(height: 2),
-          Text(l10n.libLocalOnlyBody,
+          Text(kIsWeb ? l10n.libLocalOnlyBodyWeb : l10n.libLocalOnlyBody,
               style: TextStyle(fontSize: 12, color: p.ink2, height: 1.4)),
         ],
       );

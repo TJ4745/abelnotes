@@ -1722,6 +1722,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vos carnets restent sur cet appareil. Connectez votre serveur ou Google Drive pour les retrouver partout — vous pouvez le faire à tout moment.';
 
   @override
+  String get libLocalOnlyBodyWeb =>
+      'Vos carnets restent dans ce navigateur. Exportez ceux que vous voulez garder, ou connectez Google Drive pour les avoir partout. Safari peut effacer les données des sites inutilisés depuis quelques jours, sauf si vous ajoutez l\'app à l\'écran d\'accueil.';
+
+  @override
   String get libKeepOnDevice => 'Garder uniquement sur cet appareil';
 
   @override
@@ -3057,6 +3061,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get qsReauthBanner =>
       'Le serveur n\'accepte plus votre connexion. Vos modifications sont en sécurité sur cet appareil et seront synchronisées après une nouvelle connexion.';
+
+  @override
+  String get qsDriveReauthBanner =>
+      'Google Drive vous demande de vous reconnecter. Vos modifications sont en sécurité sur cet appareil et se synchronisent dès que vous le faites.';
+
+  @override
+  String get qsBrowserStorageFull =>
+      'Ce navigateur n\'a plus de place pour enregistrer : vos dernières modifications pourraient être perdues si la page se recharge. Exportez vos carnets ou libérez de l\'espace.';
 
   @override
   String get qsReauthAction => 'Se reconnecter';
