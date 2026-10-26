@@ -4168,6 +4168,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // can import just the chunk they care about. The dialog falls back to
     // "all" by default so single-tap imports stay quick.
     final range = await _askPdfImportRange(estimated);
+    debugPrint('[PDF] range=$range mounted=$mounted pages=$estimated');
     if (range == null || !mounted) {
       await doc.dispose();
       return;
@@ -4193,7 +4194,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       // buffers don't blow the iOS jetsam limit. 150 DPI on A4 is ~8.7 MB/page
       // of RGBA; we render → encode → free ONE page at a time to stay bounded.
       final pageCount = doc.pages.length;
-      final int dpi = pageCount > 40 ? 100 : (pageCount > 15 ? 120 : 150);
+      final int dpi = pageCount > 40 ? 150 : (pageCount > 15 ? 200 : 250);
 
       // Suppress remote pulls for the duration of the import (the per-page
       // awaits yield to the event loop; a pull mid-loop would shift
@@ -4220,10 +4221,11 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         // sized from that logical size so every page costs about the same.
         final logical = pdfPageLogicalSize(dispWpt, dispHpt,
             refW: startPageW, refH: startPageH);
-        final int fullW = (logical.w * dpi / 72.0).round().clamp(1, 12000);
-        final int fullH = (logical.h * dpi / 72.0).round().clamp(1, 12000);
+        final int fullW = (logical.w * dpi / 72.0).round().clamp(1, 8000);
+        final int fullH = (logical.h * dpi / 72.0).round().clamp(1, 8000);
 
-        final pdfImg = await page.render(
+                debugPrint('[PDF] page $i: render start ${fullW}x$fullH');
+final pdfImg = await page.render(
           fullWidth: fullW.toDouble(),
           fullHeight: fullH.toDouble(),
           backgroundColor: 0xFFFFFFFF, // opaque white page
@@ -4232,10 +4234,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
           pdfImg?.dispose();
           return;
         }
-        if (pdfImg == null) continue;
+                debugPrint('[PDF] page $i: render done ${pdfImg == null ? "NULL" : "ok"} mounted=$mounted');
+if (pdfImg == null) continue;
         // Encode to PNG (lossless, matches the prior import output). The native
         // BGRA buffer + ui.Image are freed before the next page is rendered.
         final assetBytes = await _pdfImageToPng(pdfImg);
+        debugPrint('[PDF] page $i: png ${assetBytes?.length} mounted=$mounted');
         pdfImg.dispose();
         if (!mounted) return;
         if (assetBytes == null) continue;
@@ -4274,7 +4278,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         // doc/engine as the raster, so the glyph boxes map onto the exact same
         // page geometry. Best-effort per page.
         if (assetId != null && targetPageFileName != null) {
-          final layer = await PdfTextExtractor.extractPageLayer(
+                    debugPrint('[PDF] page $i: text extract start');
+final layer = await PdfTextExtractor.extractPageLayer(
             doc: doc,
             pageIndex: i,
             sourceAssetPath: assetId,
@@ -4333,6 +4338,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       }
     } catch (e) {
       debugPrint('[Canvas] PDF import failed: $e');
+      debugPrint('[PDF] ERROR caught: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
