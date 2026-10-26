@@ -1708,6 +1708,15 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         case LogicalKeyboardKey.numpad0:
           ref.read(canvasProvider.notifier).resetZoom();
           return KeyEventResult.handled;
+        case LogicalKeyboardKey.equal:
+        case LogicalKeyboardKey.add:
+        case LogicalKeyboardKey.numpadAdd:
+          ref.read(canvasProvider.notifier).zoomBy(1.25);
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.minus:
+        case LogicalKeyboardKey.numpadSubtract:
+          ref.read(canvasProvider.notifier).zoomBy(1 / 1.25);
+          return KeyEventResult.handled;
         case LogicalKeyboardKey.keyZ:
           if (shift) {
             ref.read(canvasProvider.notifier).redo();

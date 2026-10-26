@@ -8313,6 +8313,16 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     );
   }
 
+  /// Zooms by [factor] around the viewport centre (Ctrl + / Ctrl −).
+  void zoomBy(double factor) {
+    final s = state;
+    final vp = _viewportSize;
+    if (s == null || vp == null) return;
+    final z = (s.zoom * factor).clamp(0.25, 5.0);
+    final c = Offset(vp.width / 2, vp.height / 2);
+    setZoomAndPan(z, c - (c - s.panOffset) * (z / s.zoom));
+  }
+
   // ── Reset zoom ──
 
   void resetZoom() {
