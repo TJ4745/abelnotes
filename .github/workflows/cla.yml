@@ -5,7 +5,7 @@ name: CLA
 # checks out or runs code from the pull request.
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
   pull_request_target:
     types: [opened, reopened, synchronize, closed]
 
@@ -16,13 +16,14 @@ permissions:
   statuses: write
 
 concurrency:
-  group: cla-${{ github.event.pull_request.number || github.event.issue.number }}
+  group: cla-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}
 
 jobs:
   cla:
     runs-on: ubuntu-latest
     if: >-
-      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'pull_request_target' &&
+       (github.event.action != 'closed' || github.event.pull_request.merged)) ||
       (github.event.issue.pull_request &&
        (startsWith(github.event.comment.body, 'recheck') ||
         contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA')))
