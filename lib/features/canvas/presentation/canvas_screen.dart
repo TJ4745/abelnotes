@@ -2367,6 +2367,24 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     return _effectiveStylusOnly() && kind == PointerDeviceKind.touch && _isDrawLikeTool(tool);
   }
 
+  /// Whether the stylus tip is actually touching the surface.
+  /// Linux's native bridge supplies the contact pressure that GTK omits;
+  /// Windows exposes contact through the sub-pixel pen bridge.
+  bool _isStylusTipInContact(PointerEvent event) {
+    if (_linuxPenAsMouse(event)) return _penPressure(event) > 0;
+    if (event.kind != PointerDeviceKind.stylus &&
+        event.kind != PointerDeviceKind.invertedStylus) {
+      return true;
+    }
+    if (!kIsWeb && io.Platform.isWindows) {
+      return WindowsPenSubpixel.latestFresh() != null;
+    }
+    if (!kIsWeb && io.Platform.isLinux) {
+      return _penPressure(event) > 0;
+    }
+    return event is PointerDownEvent || _normalizedEventPressure(event) > 0;
+  }
+
   void _updateEraserHover(
     PointerEvent event,
     CanvasState? state,
