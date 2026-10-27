@@ -13,6 +13,7 @@ import 'package:pdfrx/pdfrx.dart' as pdfrx;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:abelnotes/l10n/app_localizations.dart';
@@ -106,6 +107,16 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   /// second pop (which would take the library with it).
   bool _autoPopScheduled = false;
   bool _isTouchPanning = false;
+
+  // Recent screen-space pan velocity, used to continue a quick drag after lift.
+  late final AnimationController _panInertiaX = AnimationController.unbounded(vsync: this)
+    ..addListener(_applyPanInertia);
+  late final AnimationController _panInertiaY = AnimationController.unbounded(vsync: this)
+    ..addListener(_applyPanInertia);
+  Offset _panVelocity = Offset.zero;
+  Duration? _lastPanSampleTime;
+  bool _panInertiaRunning = false;
+  int _panInertiaGeneration = 0;
 
   // Pinch-to-zoom state
   int _activePointers = 0;
@@ -1465,6 +1476,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     webTouchDevice.removeListener(_onWebTouchDeviceChanged);
     _dockFlyX.dispose();
     _dockFlyY.dispose();
+    _stopPanInertia();
+    _panInertiaX.dispose();
+    _panInertiaY.dispose();
     _hintMessenger?.hideCurrentSnackBar();
     WidgetsBinding.instance.removeObserver(this);
     GestureBinding.instance.pointerRouter.removeGlobalRoute(
@@ -2467,6 +2481,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       return;
     }
     if (_webPalmDown(event)) return;
+    _stopPanInertia();
+    _panVelocity = Offset.zero;
+    _lastPanSampleTime = event.timeStamp;
     _activePointers++;
     _panAnchorFromPinch = false;
     _lastPointerWasMouse = event.kind == PointerDeviceKind.mouse;
@@ -2710,7 +2727,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       if (_tryOpenLinkAt(state, linkPos)) return;
     }
 
-    final tool = state.currentTool;
+    var tool = state.currentTool;
 
     // Middle mouse button → always pan, EXCEPT when a native barrel
     // override is active. Reason: a Gaomon driverless pen reports
@@ -2728,42 +2745,31 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       return;
     }
 
-    // Stylus barrel buttons — OneNote-style temporary tool override.
-    //
-    // Driver landscape:
-    //   - Wacom EMR / Surface / Galaxy: bits 0x02 / 0x04 on the
-    //     standard buttons mask (`kPrimaryStylusButton`,
-    //     `kSecondaryStylusButton`).
-    //   - Gaomon (and most off-brand Huion-derived drivers) on
-    //     Windows: the UPPER side button switches the pointer kind
-    //     to `PointerDeviceKind.invertedStylus` (the same signal a
-    //     pen's flip-eraser end emits). The LOWER button is exposed
-    //     by their driver as a configurable shortcut — by default
-    //     "Right click" — which Flutter still routes to a stylus
-    //     PointerDown with bit 0x02 set.
-    //   - Apple Pencil 2: no buttons, only double-tap (ignored
-    //     here; covered separately).
-    //
-    // We accept BOTH paths: invertedStylus kind for the upper
-    // override, and the bit-mask test for the lower. Bitmask (not
-    // strict equality) is required because contact + barrel report
-    // the OR — `0x03` or `0x05` — never the raw barrel bit alone.
-    //
-    //   - upper barrel (or invertedStylus kind) → eraser
-    //   - lower barrel (`kPrimaryStylusButton` bit) → lasso
-    //
-    // Pending modal states (pendingSymbol / selectedElement /
-    // lassoSelection) get "escape first" — either path cancels the
-    // modal instead of switching tool.
-    if (event.kind == PointerDeviceKind.stylus ||
-        event.kind == PointerDeviceKind.invertedStylus) {
+    // Stylus side buttons — temporary user-configured tool override.
+    // The Linux GTK bridge can misclassify a pen as a mouse; its right
+    // button is the secondary stylus-button fallback in that case.
+    final isStylusPointer = event.kind == PointerDeviceKind.stylus ||
+        event.kind == PointerDeviceKind.invertedStylus;
+    final isLinuxPenButton = event.kind == PointerDeviceKind.mouse &&
+        _linuxPenAsMouse(event) &&
+        (event.buttons & kSecondaryMouseButton) != 0;
+    if (isStylusPointer || isLinuxPenButton) {
+      final settings = ref.read(appSettingsProvider);
       final invertedKind = event.kind == PointerDeviceKind.invertedStylus;
-      final hasUpper =
-          invertedKind || (event.buttons & kSecondaryStylusButton) != 0;
-      final hasLower = !invertedKind &&
+      final primaryHeld = isStylusPointer && !invertedKind &&
           (event.buttons & kPrimaryStylusButton) != 0;
-      if (hasUpper || hasLower) {
-        // Escape pending modal states first (any button).
+      final secondaryHeld = isLinuxPenButton ||
+          (isStylusPointer &&
+              (invertedKind ||
+                  (event.buttons & kSecondaryStylusButton) != 0));
+      final action = primaryHeld
+          ? settings.stylusPrimaryAction
+          : secondaryHeld
+              ? settings.stylusSecondaryAction
+              : StylusButtonAction.none;
+      final actionTool = action.tool;
+      if (actionTool != null) {
+        // Preserve the existing escape-first behavior for modal selections.
         if (state.pendingSymbol != null) {
           ref.read(canvasProvider.notifier).clearPendingSymbol();
           return;
@@ -2777,21 +2783,27 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
           return;
         }
 
-        final pagePos = _toPageCoords(event.localPosition, state, canvasSize);
+        final pagePos = _toPageCoords(
+          _stylusLocalPosition(event),
+          state,
+          canvasSize,
+        );
         _barrelButtonOverride = true;
         _barrelButtonPreviousTool = state.currentTool;
-
-        // Upper barrel → eraser, honouring the user's last picked sub-mode
-        // (per-stroke vs per-area) so it feels like the dock button.
-        // Lower barrel → lasso.
+        // Eraser honours the user's last picked sub-mode (per-stroke vs
+        // per-area) so it feels like the dock button. Read it before setTool,
+        // which itself updates that remembered mode.
         final n = ref.read(canvasProvider.notifier);
-        n.setTool(hasUpper ? n.lastEraserMode : CanvasTool.lasso);
+        tool = action == StylusButtonAction.eraser
+            ? n.lastEraserMode
+            : actionTool;
+        n.setTool(tool);
         if ((event.buttons & kPrimaryButton) == 0) {
           // Pressed while hovering: switch now, act once the tip touches.
           _barrelAwaitingContact = true;
           return;
         }
-        _beginBarrelGesture(pagePos);
+        _beginBarrelGesture(pagePos, screenPos: event.position);
         return;
       }
     }
@@ -3131,7 +3143,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         _barrelAwaitingContact = !contact;
         if (contact) {
           _beginBarrelGesture(
-              _toPageCoords(event.localPosition, state, canvasSize));
+              _toPageCoords(_stylusLocalPosition(event), state, canvasSize),
+              screenPos: event.position);
         } else {
           _endBarrelGesture();
         }
@@ -3193,12 +3206,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       }
       if (_longPressFired) return; // Don't pan after context menu shown
       final delta = event.position - _lastFocalPoint;
+      _recordPanVelocity(delta, event.timeStamp);
       _lastFocalPoint = event.position;
       final latest = ref.read(canvasProvider);
       if (latest != null) {
-        ref.read(canvasProvider.notifier).setPanOffset(latest.panOffset + delta);
-        _checkPageDrag(latest, canvasSize,
-            panOverride: latest.panOffset + delta);
+        final pan = _clampPagePanOffset(latest, canvasSize, latest.panOffset + delta);
+        ref.read(canvasProvider.notifier).setPanOffset(pan);
+        _checkPageDrag(latest, canvasSize, panOverride: pan);
       }
       return;
     }
@@ -3213,14 +3227,19 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     }
 
     if (tool == CanvasTool.pan) {
-      if (_reanchorPanAfterPinch(event.position)) return;
+      if (_reanchorPanAfterPinch(event.position)) {
+        _panVelocity = Offset.zero;
+        _lastPanSampleTime = event.timeStamp;
+        return;
+      }
       final delta = event.position - _lastFocalPoint;
+      _recordPanVelocity(delta, event.timeStamp);
       _lastFocalPoint = event.position;
       final latest = ref.read(canvasProvider);
       if (latest != null) {
-        ref.read(canvasProvider.notifier).setPanOffset(latest.panOffset + delta);
-        _checkPageDrag(latest, canvasSize,
-            panOverride: latest.panOffset + delta);
+        final pan = _clampPagePanOffset(latest, canvasSize, latest.panOffset + delta);
+        ref.read(canvasProvider.notifier).setPanOffset(pan);
+        _checkPageDrag(latest, canvasSize, panOverride: pan);
       }
       return;
     }
@@ -3340,12 +3359,15 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   }
 
   /// Starts the barrel tool's gesture at the tip's contact point.
-  void _beginBarrelGesture(Offset pagePos) {
+  void _beginBarrelGesture(Offset pagePos, {Offset? screenPos}) {
     final n = ref.read(canvasProvider.notifier);
     final live = ref.read(canvasProvider);
-    if (live?.currentTool == CanvasTool.lasso) {
+    final current = live?.currentTool;
+    if (current == CanvasTool.lasso) {
       if (live?.lassoSelection != null) n.clearSelection();
       _lassoPathNotifier.start(pagePos);
+    } else if (current == CanvasTool.pan) {
+      if (screenPos != null) _lastFocalPoint = screenPos;
     } else {
       n.startStroke(pagePos, 0.5);
     }
@@ -3462,6 +3484,14 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         final pts = List<Offset>.from(_lassoPathNotifier.points);
         _lassoPathNotifier.clear();
         notif.commitLassoPath(pts);
+      } else if (curTool == CanvasTool.highlighter &&
+          _activeStrokeNotifier.isActive &&
+          _activeStrokeNotifier.points.isNotEmpty) {
+        final points = _activeStrokeNotifier.snapshotForCommit();
+        _activeStrokeNotifier.clear();
+        notif.commitAndEndStroke(points);
+      } else if (curTool == CanvasTool.pan) {
+        _commitOrCancelPageDrag(ref.read(canvasProvider)!, _lastCanvasSize);
       }
       _markStrokeEnded('pointerUp.barrelEnd');
       // If the lasso caught a selection, STAY in lasso so the marquee is
@@ -3484,7 +3514,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       _longPressFired = false;
       final latest = ref.read(canvasProvider);
       if (latest != null) {
-        _commitOrCancelPageDrag(latest, _lastCanvasSize);
+        if (_showPrevPageHint || _showNextPageHint || _showNewPageHint) {
+          _panVelocity = Offset.zero;
+          _commitOrCancelPageDrag(latest, _lastCanvasSize);
+        } else {
+          _startPanInertia();
+          if (!_panInertiaRunning) _commitOrCancelPageDrag(latest, _lastCanvasSize);
+        }
       } else {
         _clearPageHints();
       }
@@ -3526,7 +3562,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     }
 
     if (state.currentTool == CanvasTool.pan) {
-      _commitOrCancelPageDrag(state, _lastCanvasSize);
+      if (_showPrevPageHint || _showNextPageHint || _showNewPageHint) {
+        _panVelocity = Offset.zero;
+        _commitOrCancelPageDrag(state, _lastCanvasSize);
+      } else {
+        _startPanInertia();
+        if (!_panInertiaRunning) _commitOrCancelPageDrag(state, _lastCanvasSize);
+      }
       return;
     }
     if (state.currentTool == CanvasTool.image) return;
@@ -3641,6 +3683,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // and don't touch the active stylus stroke either.
     if (_ignoredPalmPointers.remove(event.pointer)) return;
     _webTouchPointers.remove(event.pointer);
+    _stopPanInertia();
+    _panVelocity = Offset.zero;
     _activePointers = max(0, _activePointers - 1);
     // End any in-progress PDF text drag / mouse marquee and resolve a deferred
     // barrel revert so a cancelled gesture doesn't leave the flags stuck.
@@ -3954,6 +3998,95 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       );
     }
     return null;
+  }
+
+  /// Keep a visible horizontal strip of finite pages in the viewport while
+  /// allowing the existing edge-swipe navigation gesture to reach its trigger.
+  /// Scratch mode is an infinite canvas and intentionally remains freely pannable.
+  Offset _clampPagePanOffset(CanvasState state, Size canvasSize, Offset proposed) {
+    if (state.isScratch || canvasSize.width <= 0 || canvasSize.height <= 0) {
+      return proposed;
+    }
+    final pageW = state.currentPage?.width ?? 595;
+    final renderScale = _getRenderScale(state, canvasSize);
+    final pageWidth = pageW * renderScale * state.zoom;
+    if (pageWidth <= 0) return proposed;
+
+    final centerOffsetX = (canvasSize.width - pageW * renderScale) / 2 * state.zoom;
+    final margin = ref.read(appSettingsProvider).pageSideMargin;
+    final visibleWidth = min(margin, min(pageWidth, canvasSize.width));
+    final minDx = visibleWidth - centerOffsetX - pageWidth;
+    final maxDx = canvasSize.width - visibleWidth - centerOffsetX;
+    return Offset(proposed.dx.clamp(minDx, maxDx).toDouble(), proposed.dy);
+  }
+
+  void _recordPanVelocity(Offset delta, Duration timestamp) {
+    final previous = _lastPanSampleTime;
+    _lastPanSampleTime = timestamp;
+    if (previous == null) return;
+    final elapsed = (timestamp - previous).inMicroseconds / Duration.microsecondsPerSecond;
+    if (elapsed <= 0 || elapsed > 0.2) {
+      _panVelocity = Offset.zero;
+      return;
+    }
+    // Smooth pointer jitter while keeping the latest fast movement responsive.
+    final instant = delta / elapsed;
+    _panVelocity = _panVelocity * 0.35 + instant * 0.65;
+  }
+
+  void _stopPanInertia() {
+    // Invalidate completion callbacks before stopping the controllers.
+    _panInertiaGeneration++;
+    if (_panInertiaRunning) {
+      _panInertiaX.stop();
+      _panInertiaY.stop();
+      _panInertiaRunning = false;
+    }
+  }
+
+  void _applyPanInertia() {
+    if (!mounted || !_panInertiaRunning) return;
+    final state = ref.read(canvasProvider);
+    if (state == null) return;
+    if (!ref.read(appSettingsProvider).inertiaEnabled) {
+      _stopPanInertia();
+      _commitOrCancelPageDrag(state, _lastCanvasSize);
+      return;
+    }
+    final offset = _clampPagePanOffset(
+      state, _lastCanvasSize, Offset(_panInertiaX.value, _panInertiaY.value));
+    ref.read(canvasProvider.notifier).setPanOffset(offset);
+    _checkPageDrag(state, _lastCanvasSize, panOverride: offset);
+  }
+
+  void _startPanInertia() {
+    _stopPanInertia();
+    final settings = ref.read(appSettingsProvider);
+    if (!settings.inertiaEnabled ||
+        _panVelocity.distance < settings.inertiaMinVelocity || !mounted) return;
+    final state = ref.read(canvasProvider);
+    if (state == null) return;
+    _panInertiaRunning = true;
+    final generation = ++_panInertiaGeneration;
+    // Flutter's friction simulation yields a short, smoothly decelerating fling.
+    final velocity = _panVelocity * settings.inertiaStrength;
+    _panInertiaX.value = state.panOffset.dx;
+    _panInertiaY.value = state.panOffset.dy;
+    const tolerance = Tolerance(velocity: 10.0, distance: 1.0);
+    final xFlight = _panInertiaX.animateWith(
+      FrictionSimulation(settings.inertiaFriction, state.panOffset.dx, velocity.dx, tolerance: tolerance),
+    );
+    final yFlight = _panInertiaY.animateWith(
+      FrictionSimulation(settings.inertiaFriction, state.panOffset.dy, velocity.dy, tolerance: tolerance),
+    );
+    Future.wait([xFlight, yFlight]).whenComplete(() => _finishPanInertia(generation));
+  }
+
+  void _finishPanInertia(int generation) {
+    if (!mounted || !_panInertiaRunning || generation != _panInertiaGeneration) return;
+    _panInertiaRunning = false;
+    final state = ref.read(canvasProvider);
+    if (state != null) _commitOrCancelPageDrag(state, _lastCanvasSize);
   }
 
   // ── Pinch-to-zoom ──

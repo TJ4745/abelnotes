@@ -106,6 +106,57 @@ class _SettingsScreenV2State extends ConsumerState<SettingsScreenV2> {
   }
 }
 
+class _InertiaSliderRow extends StatelessWidget {
+  final String title;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String suffix;
+  final ValueChanged<double> onChanged;
+
+  const _InertiaSliderRow({
+    required this.title,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+    this.suffix = '',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = HwThemeScope.of(context);
+    final shown = value == value.roundToDouble()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(2);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: p.paper2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: Text(title, style: TextStyle(
+                fontSize: 14, color: p.ink0, fontWeight: FontWeight.w500))),
+            Text('$shown$suffix', style: TextStyle(fontSize: 12, color: p.ink2)),
+          ]),
+          Slider(
+            value: value.clamp(min, max).toDouble(),
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Section list + label + icon, shared between the desktop rail and the
 /// phone menu so both stay in sync.
 List<(String, String, String)> _sectionItems(AppLocalizations l10n) => [
@@ -581,12 +632,22 @@ class _GeneralSection extends ConsumerWidget {
   }
 }
 
+const Map<StylusButtonAction, String> _stylusActionLabels = {
+  StylusButtonAction.none: 'Keine Aktion',
+  StylusButtonAction.eraser: 'Radierer',
+  StylusButtonAction.lasso: 'Lasso',
+  StylusButtonAction.pan: 'Verschieben',
+};
+
+String _stylusActionLabel(StylusButtonAction action) =>
+    _stylusActionLabels[action]!;
+
 class _InputSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final override = ref.watch(
-        appSettingsProvider.select((s) => s.stylusOnlyDrawing));
+    final settings = ref.watch(appSettingsProvider.select((s) => s));
+    final override = settings.stylusOnlyDrawing;
     // Off by default everywhere: a finger draws the armed tool, and the
     // editor's pan tool is the "don't draw" state. This switch is the
     // palm-rejection opt-in for people who write with a stylus.
@@ -609,6 +670,66 @@ class _InputSection extends ConsumerWidget {
                 onChanged: (v) => ref
                     .read(appSettingsProvider.notifier)
                     .setStylusOnlyDrawing(v))),
+        _Row(
+          title: 'Untere Seitentaste',
+          control: DropdownButton<StylusButtonAction>(
+            value: settings.stylusPrimaryAction,
+            items: StylusButtonAction.values
+                .map((action) => DropdownMenuItem(
+                      value: action,
+                      child: Text(_stylusActionLabel(action)),
+                    ))
+                .toList(),
+            onChanged: (action) {
+              if (action != null) {
+                ref.read(appSettingsProvider.notifier)
+                    .setStylusPrimaryAction(action);
+              }
+            },
+          ),
+        ),
+        _Row(
+          title: 'Obere Seitentaste',
+          control: DropdownButton<StylusButtonAction>(
+            value: settings.stylusSecondaryAction,
+            items: StylusButtonAction.values
+                .map((action) => DropdownMenuItem(
+                      value: action,
+                      child: Text(_stylusActionLabel(action)),
+                    ))
+                .toList(),
+            onChanged: (action) {
+              if (action != null) {
+                ref.read(appSettingsProvider.notifier)
+                    .setStylusSecondaryAction(action);
+              }
+            },
+          ),
+        ),
+        _Row(
+            title: 'Canvas-Trägheit',
+            sub: 'Bewegung nach schnellem Wischen fortsetzen',
+            control: HwSwitch(
+                value: settings.inertiaEnabled,
+                onChanged: (v) => ref
+                    .read(appSettingsProvider.notifier)
+                    .setInertiaEnabled(v))),
+        _InertiaSliderRow(
+            title: 'Trägheitsstärke', value: settings.inertiaStrength,
+            min: 0.05, max: 1.5, divisions: 29,
+            onChanged: ref.read(appSettingsProvider.notifier).setInertiaStrength),
+        _InertiaSliderRow(
+            title: 'Reibung (höher = kürzer)', value: settings.inertiaFriction,
+            min: 0.05, max: 1.0, divisions: 19,
+            onChanged: ref.read(appSettingsProvider.notifier).setInertiaFriction),
+        _InertiaSliderRow(
+            title: 'Mindestgeschwindigkeit', value: settings.inertiaMinVelocity,
+            min: 20, max: 300, divisions: 28, suffix: ' px/s',
+            onChanged: ref.read(appSettingsProvider.notifier).setInertiaMinVelocity),
+        _InertiaSliderRow(
+            title: 'Sichtbarer Seitenrand', value: settings.pageSideMargin,
+            min: 0, max: 240, divisions: 24, suffix: ' px',
+            onChanged: ref.read(appSettingsProvider.notifier).setPageSideMargin),
         _Row(
             title: l10n.setPressureThickness,
             sub: l10n.setPressureThicknessSub,

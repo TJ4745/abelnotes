@@ -10,6 +10,42 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 /// Library sort strategies.
+enum StylusButtonAction {
+  none,
+  eraser,
+  lasso,
+  pan,
+}
+
+extension StylusButtonActionTool on StylusButtonAction {
+  CanvasTool? get tool {
+    switch (this) {
+      case StylusButtonAction.none:
+        return null;
+      case StylusButtonAction.eraser:
+        return CanvasTool.eraserStandard;
+      case StylusButtonAction.lasso:
+        return CanvasTool.lasso;
+      case StylusButtonAction.pan:
+        return CanvasTool.pan;
+    }
+  }
+}
+
+StylusButtonAction _readStylusButtonAction(
+  Object? stored, {
+  required StylusButtonAction fallback,
+}) {
+  final name = stored as String?;
+  if (name == 'eraserStandard' || name == 'eraserStroke') {
+    return StylusButtonAction.eraser;
+  }
+  return StylusButtonAction.values.firstWhere(
+    (action) => action.name == name,
+    orElse: () => fallback,
+  );
+}
+
 enum LibrarySortMode {
   modifiedDesc, // last-edited first (default)
   modifiedAsc,
@@ -147,9 +183,20 @@ class AppSettings {
   /// to get palm rejection.
   final bool? stylusOnlyDrawing;
 
+  /// Temporary tool mappings for the stylus side buttons.
+  final StylusButtonAction stylusPrimaryAction;
+  final StylusButtonAction stylusSecondaryAction;
+
   /// Stylus pressure sets the stroke width. Off, every pen stroke has the
   /// width a pressure-less device gets.
   final bool pressureWidth;
+
+  /// Canvas fling momentum preferences.
+  final bool inertiaEnabled;
+  final double inertiaStrength;
+  final double inertiaFriction;
+  final double inertiaMinVelocity;
+  final double pageSideMargin;
 
   /// Stylus lifts shorter than a few ms continue the same stroke instead of
   /// starting a new one (sensor dropouts on iPad).
@@ -198,7 +245,14 @@ class AppSettings {
     this.toolDock = const ToolDockConfig(),
     this.mouseDraws = false,
     this.stylusOnlyDrawing,
+    this.stylusPrimaryAction = StylusButtonAction.lasso,
+    this.stylusSecondaryAction = StylusButtonAction.eraser,
     this.pressureWidth = true,
+    this.inertiaEnabled = true,
+    this.inertiaStrength = 0.45,
+    this.inertiaFriction = 0.35,
+    this.inertiaMinVelocity = 120,
+    this.pageSideMargin = 48,
     this.strokeContinuation = true,
     this.fillRecognizedShapes = true,
     this.lastTool,
@@ -229,7 +283,14 @@ class AppSettings {
     ToolDockConfig? toolDock,
     bool? mouseDraws,
     bool? stylusOnlyDrawing,
+    StylusButtonAction? stylusPrimaryAction,
+    StylusButtonAction? stylusSecondaryAction,
     bool? pressureWidth,
+    bool? inertiaEnabled,
+    double? inertiaStrength,
+    double? inertiaFriction,
+    double? inertiaMinVelocity,
+    double? pageSideMargin,
     bool? strokeContinuation,
     bool? fillRecognizedShapes,
     String? lastTool,
@@ -257,7 +318,14 @@ class AppSettings {
         toolDock: toolDock ?? this.toolDock,
         mouseDraws: mouseDraws ?? this.mouseDraws,
         stylusOnlyDrawing: stylusOnlyDrawing ?? this.stylusOnlyDrawing,
+        stylusPrimaryAction: stylusPrimaryAction ?? this.stylusPrimaryAction,
+        stylusSecondaryAction: stylusSecondaryAction ?? this.stylusSecondaryAction,
         pressureWidth: pressureWidth ?? this.pressureWidth,
+        inertiaEnabled: inertiaEnabled ?? this.inertiaEnabled,
+        inertiaStrength: inertiaStrength ?? this.inertiaStrength,
+        inertiaFriction: inertiaFriction ?? this.inertiaFriction,
+        inertiaMinVelocity: inertiaMinVelocity ?? this.inertiaMinVelocity,
+        pageSideMargin: pageSideMargin ?? this.pageSideMargin,
         strokeContinuation: strokeContinuation ?? this.strokeContinuation,
         fillRecognizedShapes: fillRecognizedShapes ?? this.fillRecognizedShapes,
         lastTool: lastTool ?? this.lastTool,
@@ -302,6 +370,14 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
       final theme = ThemeMode.values.firstWhere(
         (m) => m.name == (map['theme'] as String?),
         orElse: () => ThemeMode.system,
+      );
+      final stylusPrimaryAction = _readStylusButtonAction(
+        map['stylus_primary'],
+        fallback: StylusButtonAction.lasso,
+      );
+      final stylusSecondaryAction = _readStylusButtonAction(
+        map['stylus_secondary'],
+        fallback: StylusButtonAction.eraser,
       );
 
       final toolPresetsRaw =
@@ -357,7 +433,14 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
         toolDock: dock,
         mouseDraws: map['mouse_draws'] as bool? ?? false,
         stylusOnlyDrawing: map['stylus_only_drawing'] as bool?,
+        stylusPrimaryAction: stylusPrimaryAction,
+        stylusSecondaryAction: stylusSecondaryAction,
         pressureWidth: map['pressure_width'] as bool? ?? true,
+        inertiaEnabled: map['inertia_enabled'] as bool? ?? true,
+        inertiaStrength: ((map['inertia_strength'] as num?)?.toDouble() ?? 0.45).clamp(0.05, 1.5).toDouble(),
+        inertiaFriction: ((map['inertia_friction'] as num?)?.toDouble() ?? 0.35).clamp(0.05, 1.0).toDouble(),
+        inertiaMinVelocity: ((map['inertia_min_velocity'] as num?)?.toDouble() ?? 120).clamp(20, 300).toDouble(),
+        pageSideMargin: ((map['page_side_margin'] as num?)?.toDouble() ?? 48).clamp(0, 240).toDouble(),
         strokeContinuation: map['stroke_continuation'] as bool? ?? true,
         fillRecognizedShapes: map['fill_shapes'] as bool? ?? true,
         lastTool: map['last_tool'] as String?,
@@ -393,7 +476,14 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
         'mouse_draws': state.mouseDraws,
         if (state.stylusOnlyDrawing != null)
           'stylus_only_drawing': state.stylusOnlyDrawing,
+        'stylus_primary': state.stylusPrimaryAction.name,
+        'stylus_secondary': state.stylusSecondaryAction.name,
         'pressure_width': state.pressureWidth,
+        'inertia_enabled': state.inertiaEnabled,
+        'inertia_strength': state.inertiaStrength,
+        'inertia_friction': state.inertiaFriction,
+        'inertia_min_velocity': state.inertiaMinVelocity,
+        'page_side_margin': state.pageSideMargin,
         'stroke_continuation': state.strokeContinuation,
         'fill_shapes': state.fillRecognizedShapes,
         if (state.lastTool != null) 'last_tool': state.lastTool,
@@ -473,6 +563,41 @@ class AppSettingsNotifier extends StateNotifier<AppSettings> {
 
   void setStylusOnlyDrawing(bool v) {
     state = state.copyWith(stylusOnlyDrawing: v);
+    _persist();
+  }
+
+  void setStylusPrimaryAction(StylusButtonAction action) {
+    state = state.copyWith(stylusPrimaryAction: action);
+    _persist();
+  }
+
+  void setStylusSecondaryAction(StylusButtonAction action) {
+    state = state.copyWith(stylusSecondaryAction: action);
+    _persist();
+  }
+
+  void setInertiaEnabled(bool v) {
+    state = state.copyWith(inertiaEnabled: v);
+    _persist();
+  }
+
+  void setInertiaStrength(double v) {
+    state = state.copyWith(inertiaStrength: v.clamp(0.05, 1.5).toDouble());
+    _persist();
+  }
+
+  void setInertiaFriction(double v) {
+    state = state.copyWith(inertiaFriction: v.clamp(0.05, 1.0).toDouble());
+    _persist();
+  }
+
+  void setInertiaMinVelocity(double v) {
+    state = state.copyWith(inertiaMinVelocity: v.clamp(20, 300).toDouble());
+    _persist();
+  }
+
+  void setPageSideMargin(double v) {
+    state = state.copyWith(pageSideMargin: v.clamp(0, 240).toDouble());
     _persist();
   }
 
