@@ -2769,6 +2769,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
                 'strokeWidth': e.value.strokeWidth,
                 'opacity': e.value.opacity,
                 'eraserSize': e.value.eraserSize.name,
+                if (e.value.eraserDiameterPt != null)
+                  'eraserDiameterPt': e.value.eraserDiameterPt,
               },
           },
         };
@@ -2807,6 +2809,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
               (e) => e.name == (s['eraserSize'] as String?),
               orElse: () => EraserSize.medium,
             ),
+            eraserDiameterPt: (s['eraserDiameterPt'] as num?)?.toDouble(),
           );
         });
       }
@@ -2892,9 +2895,22 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
 
   void setEraserSize(EraserSize size) {
     if (state == null) return;
-    if (state!.toolSettings.eraserSize == size) return;
+    final ts = state!.toolSettings;
+    if (ts.eraserSize == size && ts.eraserDiameterPt == null) return;
     state = state!.copyWith(
-      toolSettings: state!.toolSettings.copyWith(eraserSize: size),
+      toolSettings: ts.copyWith(eraserSize: size, clearEraserDiameter: true),
+    );
+    _rememberToolPref();
+  }
+
+  void setEraserDiameterPt(double? pt) {
+    if (state == null) return;
+    final ts = state!.toolSettings;
+    if (ts.eraserDiameterPt == pt) return;
+    state = state!.copyWith(
+      toolSettings: pt == null
+          ? ts.copyWith(clearEraserDiameter: true)
+          : ts.copyWith(eraserDiameterPt: pt),
     );
     _rememberToolPref();
   }
@@ -3544,7 +3560,7 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // of continuous drawing, then caps. The user keeps moving →
     // effective radius keeps growing, so "wipe everything in this
     // region" works without flipping size from the popup.
-    final base = eraserSizeToRadius(s.toolSettings.eraserSize);
+    final base = s.toolSettings.eraserRadius;
     final startedAt = _eraseGestureStart;
     double growth = 1.0;
     if (startedAt != null) {
