@@ -7,8 +7,10 @@
 **Handwritten notes for people who write equations.**
 Cross-platform, self-hostable, open source. Your notes sync to a place *you* control — your own WebDAV/Nextcloud server, or your own Google Drive. Never through a cloud we run.
 
+**[Try it in your browser →](https://app.abelnotes.app)** — nothing to install, no account.
+
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
-![Platforms](https://img.shields.io/badge/platforms-Windows_·_Linux_·_Android-informational)
+![Platforms](https://img.shields.io/badge/platforms-Windows_·_Linux_·_Android_·_Web-informational)
 
 </div>
 
@@ -26,7 +28,7 @@ Most handwriting apps are walled gardens: your notes live on someone else's clou
 
 - **Your data, your account.** Sync over WebDAV to your own Nextcloud (or ownCloud), or to your own Google Drive. Nothing passes through a cloud we run.
 - **Built for STEM.** Real LaTeX rendering, PDF annotation with selectable text, and paper types that actually matter for technical work — Cornell, isometric, music staff, and more.
-- **Actually cross-platform.** Not "mobile-first, desktop-someday." Windows, Linux and Android are first-class today, with real per-platform work under the hood.
+- **Actually cross-platform.** Not "mobile-first, desktop-someday." Windows, Linux, Android and the web are first-class today, with real per-platform work under the hood.
 - **Open source, AGPL-3.0.** You can read exactly how your notes are handled. Build it yourself for free, or grab a store build to support development.
 
 ---
@@ -84,11 +86,12 @@ Most handwriting apps are walled gardens: your notes live on someone else's clou
 
 Grab the latest build from the [**Releases**](../../releases) page:
 
+- **Web** — https://app.abelnotes.app, right in the browser: nothing to install, works offline once loaded, and can be added to the home screen on iPhone and iPad. Syncs with Google Drive; syncing with a WebDAV server from the browser needs that server to allow requests from app.abelnotes.app (CORS).
 - **Windows** — Installable at the Microsoft Store => https://apps.microsoft.com/detail/9nl7fk76t2fv
 - **Linux** — Flatpak with automatic updates: https://abelnotes.github.io/flatpak/ (one click in GNOME Software, KDE Discover or the Mint Software Manager), or the `.deb` from Releases
 - **Android** — `.apk`, Installable at the Google Play Store Now!
 https://play.google.com/store/apps/details?id=app.abelnotes.notes
-- **iPadOS / macOS** — working build, tested on real hardware, but not yet distributed here: an Apple Developer Program membership (paid, $100/year) is required to sign and ship builds outside Xcode. *Coming once that's set up.*
+- **iPadOS / macOS** — working build, tested on real hardware, but not yet distributed here: an Apple Developer Program membership (paid, $100/year) is required to sign and ship builds outside Xcode. *Coming once that's set up.* Meanwhile, the web app runs on both.
 
 ---
 
