@@ -4882,6 +4882,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                 notifier.setToolSettings(
                     canvasState.toolSettings.copyWith(shapeRecognition: v));
               },
+              onShapeGuessSecondary: _showShapeGuessMenu,
               onToolChanged: (t, kind) {
                 _noteDockTapDevice(kind);
                 _pickTool(t);
@@ -8467,6 +8468,27 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
   /// Right-click / long-press on a thumbnail in the bottom strip.
   /// Anchored at [pos] (global), shows quick actions on that page.
+  /// Auto-shape options; the same switch as Settings → Fill shapes.
+  void _showShapeGuessMenu(Offset pos) async {
+    final l10n = AppLocalizations.of(context);
+    final fill = ref.read(appSettingsProvider).fillRecognizedShapes;
+    final picked = await showMenu<bool>(
+      context: context,
+      position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx + 1, pos.dy + 1),
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      items: [
+        CheckedPopupMenuItem(
+          value: !fill,
+          checked: fill,
+          child: Text(l10n.setFillShapes),
+        ),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    ref.read(appSettingsProvider.notifier).setFillRecognizedShapes(picked);
+  }
+
   void _showPageStripContextMenu(int pageNumber, Offset pos) async {
     final state = ref.read(canvasProvider);
     if (state == null) return;
