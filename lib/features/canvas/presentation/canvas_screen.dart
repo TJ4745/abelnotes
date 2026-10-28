@@ -21,6 +21,7 @@ import 'package:abelnotes/core/providers/app_settings_provider.dart';
 import 'package:abelnotes/core/providers/auth_provider.dart'
     show webdavServiceProvider, nextcloudShareServiceProvider;
 import 'package:abelnotes/core/providers/canvas_provider.dart';
+import 'package:abelnotes/features/canvas/presentation/pen_contact.dart';
 import 'package:abelnotes/features/canvas/presentation/missing_page_view.dart';
 import 'package:abelnotes/core/providers/cross_notebook_clipboard_provider.dart';
 import 'package:abelnotes/core/providers/pending_import_provider.dart';
@@ -142,6 +143,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // Override armed but the tip isn't touching: GTK reports a barrel press
   // made while hovering as the pointer-down, before any contact.
   bool _barrelAwaitingContact = false;
+  // GTK and browsers send a side-button press while hovering as a down.
+  static final bool _downMayPrecedeContact = kIsWeb || io.Platform.isLinux;
 
   // ── New chrome state (warm-paper redesign) ─────────────────────
   bool _popupOpen = false;
@@ -2699,7 +2702,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         // Lower barrel → lasso.
         final n = ref.read(canvasProvider.notifier);
         n.setTool(hasUpper ? n.lastEraserMode : CanvasTool.lasso);
-        if ((event.buttons & kPrimaryButton) == 0) {
+        if (!penTipTouches(event.buttons,
+            downMayPrecedeContact: _downMayPrecedeContact)) {
           // Pressed while hovering: switch now, act once the tip touches.
           _barrelAwaitingContact = true;
           return;
@@ -3036,7 +3040,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
     final isPen = event.kind == PointerDeviceKind.stylus ||
         event.kind == PointerDeviceKind.invertedStylus;
-    final contact = (event.buttons & kPrimaryButton) != 0;
+    final contact = penTipTouches(event.buttons,
+        downMayPrecedeContact: _downMayPrecedeContact);
     if (isPen && _barrelButtonOverride) {
       // While a barrel is held the tip can land and lift without a new
       // pointer-down (GTK): only erase/select while it touches.
