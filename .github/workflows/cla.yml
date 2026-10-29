@@ -36,3 +36,31 @@ jobs:
           path-to-signatures: 'signatures/cla.json'
           branch: 'cla-signatures'
           allowlist: 'en-j0y,dependabot[bot],github-actions[bot]'
+
+  # A signature only rechecks the pull request it was written on. Rerun the
+  # check of the signer's other open pull requests so they turn green too,
+  # instead of asking for the same signature again.
+  recheck-others:
+    needs: cla
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA')
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SIGNER: ${{ github.event.comment.user.login }}
+          SIGNED_ON: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          gh pr list --state open --author "$SIGNER" --json number,headRefOid \
+            --jq ".[] | select(.number != $SIGNED_ON) | \"\(.number) \(.headRefOid)\"" |
+          while read -r pr sha; do
+            run=$(gh run list --workflow cla.yml --event pull_request_target --commit "$sha" \
+              --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+            if [ -n "$run" ]; then
+              echo "PR #$pr: rerun $run"
+              gh run rerun "$run" || echo "PR #$pr: rerun failed"
+            fi
+          done
