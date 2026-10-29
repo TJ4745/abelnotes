@@ -146,6 +146,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // CanvasState so autosave/sync don't read it as an erase in progress.
   int? _eraserHoverPointer;
   final ValueNotifier<Offset?> _eraserHoverPos = ValueNotifier<Offset?>(null);
+  // Hover preview comes from a held upper barrel, not the eraser tool.
+  bool _eraserHoverBarrel = false;
 
   // ── New chrome state (warm-paper redesign) ─────────────────────
   bool _popupOpen = false;
@@ -2391,14 +2393,16 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         (event.buttons & kSecondaryStylusButton) != 0;
     if (state != null && (_isEraserTool(state.currentTool) || barrelEraser)) {
       _eraserHoverPointer = event.pointer;
+      _eraserHoverBarrel = barrelEraser;
       _eraserHoverPos.value = _stylusLocalPosition(event);
-    } else if (_eraserHoverPointer == event.pointer) {
+    } else {
       _clearEraserHover();
     }
   }
 
   void _clearEraserHover() {
     _eraserHoverPointer = null;
+    _eraserHoverBarrel = false;
     _eraserHoverPos.value = null;
   }
 
@@ -3421,6 +3425,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (_barrelButtonOverride) {
       _barrelButtonOverride = false;
       _barrelAwaitingContact = false;
+      _clearEraserHover();
       final notif = ref.read(canvasProvider.notifier);
       final prevTool = _barrelButtonPreviousTool;
       final curTool = ref.read(canvasProvider)?.currentTool;
@@ -3676,6 +3681,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       if (_barrelButtonOverride) {
         _barrelButtonOverride = false;
         _barrelAwaitingContact = false;
+        _clearEraserHover();
         if (_barrelButtonPreviousTool != null) {
           ref.read(canvasProvider.notifier).setTool(_barrelButtonPreviousTool!);
           _barrelButtonPreviousTool = null;
@@ -3696,6 +3702,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (_barrelButtonOverride) {
       _barrelButtonOverride = false;
       _barrelAwaitingContact = false;
+      _clearEraserHover();
       if (_barrelButtonPreviousTool != null) {
         ref.read(canvasProvider.notifier).setTool(_barrelButtonPreviousTool!);
         _barrelButtonPreviousTool = null;
@@ -5749,6 +5756,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                               _toScreenCoords(
                                   eraserState.pos!, fullState, canvasSize),
                               canvasSize,
+                              erasing: true,
                             ),
                           ],
                         );
@@ -5757,11 +5765,16 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                       return ValueListenableBuilder<Offset?>(
                         valueListenable: _eraserHoverPos,
                         builder: (context, hoverPos, _) {
-                          if (hoverPos == null) return const SizedBox.shrink();
+                          if (hoverPos == null ||
+                              !(_isEraserTool(eraserState.tool) ||
+                                  _eraserHoverBarrel)) {
+                            return const SizedBox.shrink();
+                          }
                           final live = ref.read(canvasProvider) ?? fullState;
                           return Stack(
                             children: [
-                              _buildEraserCursor(live, hoverPos, canvasSize),
+                              _buildEraserCursor(live, hoverPos, canvasSize,
+                                  erasing: false),
                             ],
                           );
                         },
@@ -6118,7 +6131,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   bool _isEraserTool(CanvasTool tool) =>
       tool == CanvasTool.eraserStandard || tool == CanvasTool.eraserStroke;
 
-  Widget _buildEraserCursor(CanvasState state, Offset pos, Size canvasSize) {
+  // Hover: thin outline. Tip down: accent fill, so contact is visible.
+  Widget _buildEraserCursor(CanvasState state, Offset pos, Size canvasSize,
+      {required bool erasing}) {
     final p = HwThemeScope.of(context);
     // Radius is in page units (see _eraseAt): screen size needs the same
     // renderScale × zoom factor _toScreenCoords applies to the position.
@@ -6132,8 +6147,12 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
           width: r * 2, height: r * 2,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: p.ink2, width: 1.5),
-            color: p.paper0.withValues(alpha: 0.3),
+            border: erasing
+                ? Border.all(color: p.accent, width: 2)
+                : Border.all(color: p.ink3, width: 1),
+            color: erasing
+                ? p.accent.withValues(alpha: HwTheme.alphaMedium)
+                : null,
           ),
         ),
       ),
