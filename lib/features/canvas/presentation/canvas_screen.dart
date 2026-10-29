@@ -142,12 +142,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // Override armed but the tip isn't touching: GTK reports a barrel press
   // made while hovering as the pointer-down, before any contact.
   bool _barrelAwaitingContact = false;
-  // Eraser radius under a hovering pen, canvas-local; kept out of
-  // CanvasState so autosave/sync don't read it as an erase in progress.
-  int? _eraserHoverPointer;
-  final ValueNotifier<Offset?> _eraserHoverPos = ValueNotifier<Offset?>(null);
-  // Hover preview comes from a held upper barrel, not the eraser tool.
-  bool _eraserHoverBarrel = false;
+  // Hovering pen's tool hint (eraser radius / lasso badge), canvas-local;
+  // kept out of CanvasState so autosave/sync don't read it as an erase.
+  int? _penHoverPointer;
+  final ValueNotifier<Offset?> _penHoverPos = ValueNotifier<Offset?>(null);
+  _PenHoverHint _penHoverHint = _PenHoverHint.eraser;
+  // Hint comes from a held barrel, not the dock tool.
+  bool _penHoverBarrel = false;
 
   // ── New chrome state (warm-paper redesign) ─────────────────────
   bool _popupOpen = false;
@@ -983,7 +984,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     );
     // Linux-only: receive stylus pressure the GTK embedder drops. No-op
     // elsewhere. See LinuxPenPressure / _penPressure.
-    LinuxPenPressure.register(onProximityOut: _clearEraserHover);
+    LinuxPenPressure.register(onProximityOut: _clearPenHover);
     // Let the provider's save-prep pause while a stroke is mid-flight.
     // The ActiveStrokeNotifier is screen-local (it bypasses Riverpod for
     // perf), so the provider can't see pen-down state without this probe.
@@ -1515,7 +1516,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     _focusNode.dispose();
     _pdfTextSelController?.dispose();
     _mouseHoverCursor.dispose();
-    _eraserHoverPos.dispose();
+    _penHoverPos.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     // Deliberately NOT calling DesktopWindow.setFullScreen(false) here: by
     // the time dispose() runs the native GTK window may already be
@@ -2384,46 +2385,62 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         (event is PointerMoveEvent && (event.buttons & kPrimaryButton) == 0);
   }
 
-  void _updateEraserHover(PointerEvent event, CanvasState? state) {
+  void _updatePenHover(PointerEvent event, CanvasState? state) {
+    // Tip down (a barrel press may have been the pointer-down) or another
+    // device: no hover hint.
     if (!_isPenHoverSample(event)) {
-      if (event is PointerHoverEvent) _clearEraserHover();
+      _clearPenHover();
       return;
     }
-    final barrelEraser = event.kind == PointerDeviceKind.invertedStylus ||
-        (event.buttons & kSecondaryStylusButton) != 0;
-    if (state != null && (_isEraserTool(state.currentTool) || barrelEraser)) {
-      _eraserHoverPointer = event.pointer;
-      _eraserHoverBarrel = barrelEraser;
-      _eraserHoverPos.value = _stylusLocalPosition(event);
-    } else {
-      _clearEraserHover();
+    final inverted = event.kind == PointerDeviceKind.invertedStylus;
+    final upper = inverted || (event.buttons & kSecondaryStylusButton) != 0;
+    final lower = !inverted && (event.buttons & kPrimaryStylusButton) != 0;
+    final tool = state?.currentTool;
+    final _PenHoverHint? hint = upper
+        ? _PenHoverHint.eraser
+        : lower
+            ? _PenHoverHint.lasso
+            : tool == null
+                ? null
+                : _isEraserTool(tool)
+                    ? _PenHoverHint.eraser
+                    : tool == CanvasTool.lasso
+                        ? _PenHoverHint.lasso
+                        : null;
+    if (hint == null) {
+      _clearPenHover();
+      return;
     }
+    _penHoverPointer = event.pointer;
+    _penHoverBarrel = upper || lower;
+    _penHoverHint = hint;
+    _penHoverPos.value = _stylusLocalPosition(event);
   }
 
-  void _clearEraserHover() {
-    _eraserHoverPointer = null;
-    _eraserHoverBarrel = false;
-    _eraserHoverPos.value = null;
+  void _clearPenHover() {
+    _penHoverPointer = null;
+    _penHoverBarrel = false;
+    _penHoverPos.value = null;
   }
 
   // Hides the hover preview when the pen leaves proximity or the canvas
   // without a MouseRegion exit (e.g. over the dock).
   void _onGlobalPointerEvent(PointerEvent event) {
-    if (event.pointer != _eraserHoverPointer) return;
+    if (event.pointer != _penHoverPointer) return;
     if (event is PointerRemovedEvent) {
-      _clearEraserHover();
+      _clearPenHover();
       return;
     }
     if (!_isPenHoverSample(event)) return;
     final box = _canvasStackKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached ||
         !(Offset.zero & box.size).contains(box.globalToLocal(event.position))) {
-      _clearEraserHover();
+      _clearPenHover();
     }
   }
 
   void _onPointerDown(PointerDownEvent event, CanvasState state, Size canvasSize) {
-    _clearEraserHover();
+    _clearPenHover();
     // Gaomon driverless: barrel-held + tip-contact arrives as a
     // synth mouse event in parallel with the suppressed pen stream.
     // For the lower barrel it's WM_MBUTTONDOWN (kind=mouse,
@@ -3425,7 +3442,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (_barrelButtonOverride) {
       _barrelButtonOverride = false;
       _barrelAwaitingContact = false;
-      _clearEraserHover();
+      _clearPenHover();
       final notif = ref.read(canvasProvider.notifier);
       final prevTool = _barrelButtonPreviousTool;
       final curTool = ref.read(canvasProvider)?.currentTool;
@@ -3681,7 +3698,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       if (_barrelButtonOverride) {
         _barrelButtonOverride = false;
         _barrelAwaitingContact = false;
-        _clearEraserHover();
+        _clearPenHover();
         if (_barrelButtonPreviousTool != null) {
           ref.read(canvasProvider.notifier).setTool(_barrelButtonPreviousTool!);
           _barrelButtonPreviousTool = null;
@@ -3702,7 +3719,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     if (_barrelButtonOverride) {
       _barrelButtonOverride = false;
       _barrelAwaitingContact = false;
-      _clearEraserHover();
+      _clearPenHover();
       if (_barrelButtonPreviousTool != null) {
         ref.read(canvasProvider.notifier).setTool(_barrelButtonPreviousTool!);
         _barrelButtonPreviousTool = null;
@@ -5348,7 +5365,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
         return ValueListenableBuilder<MouseCursor?>(
           valueListenable: _mouseHoverCursor,
           builder: (context, hoverCursor, child) => MouseRegion(
-            onExit: (_) => _clearEraserHover(),
+            onExit: (_) => _clearPenHover(),
             // Mouse override (selection arrow / I-beam) when set; otherwise the
             // tool default so the pen keeps its drawing crosshair.
             cursor: hoverCursor ?? cursor,
@@ -5391,13 +5408,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                   },
                   onPointerMove: (e) {
                     final live = ref.read(canvasProvider) ?? canvasState;
-                    _updateEraserHover(e, live);
+                    _updatePenHover(e, live);
                     _onPointerMove(e, live, canvasSize);
                   },
                   onPointerHover: (e) {
                     _lastPointerWasMouse = e.kind == PointerDeviceKind.mouse;
                     final live = ref.read(canvasProvider);
-                    _updateEraserHover(e, live);
+                    _updatePenHover(e, live);
                     // Pen/stylus (or no state) → tool default cursor (crosshair).
                     if (e.kind != PointerDeviceKind.mouse || live == null) {
                       if (_mouseHoverCursor.value != null) {
@@ -5763,18 +5780,24 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                       }
                       // Drag cursor wins; otherwise the hovering pen's.
                       return ValueListenableBuilder<Offset?>(
-                        valueListenable: _eraserHoverPos,
+                        valueListenable: _penHoverPos,
                         builder: (context, hoverPos, _) {
+                          final lasso = _penHoverHint == _PenHoverHint.lasso;
+                          final toolMatches = lasso
+                              ? eraserState.tool == CanvasTool.lasso
+                              : _isEraserTool(eraserState.tool);
                           if (hoverPos == null ||
-                              !(_isEraserTool(eraserState.tool) ||
-                                  _eraserHoverBarrel)) {
+                              !(toolMatches || _penHoverBarrel)) {
                             return const SizedBox.shrink();
                           }
                           final live = ref.read(canvasProvider) ?? fullState;
                           return Stack(
                             children: [
-                              _buildEraserCursor(live, hoverPos, canvasSize,
-                                  erasing: false),
+                              lasso
+                                  ? _buildLassoHoverBadge(hoverPos)
+                                  : _buildEraserCursor(
+                                      live, hoverPos, canvasSize,
+                                      erasing: false),
                             ],
                           );
                         },
@@ -6155,6 +6178,24 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                 : null,
           ),
         ),
+      ),
+    );
+  }
+
+  // Lasso icon beside a hovering tip: the barrel/tool will select on touch.
+  Widget _buildLassoHoverBadge(Offset pos) {
+    final p = HwThemeScope.of(context);
+    return Positioned(
+      left: pos.dx + 8, top: pos.dy + 8,
+      child: Container(
+        width: 22, height: 22,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: p.paper0,
+          border: Border.all(color: p.ink3, width: 1),
+        ),
+        child: HwIcon('lasso', size: 14, color: p.ink1, strokeWidth: 1.4),
       ),
     );
   }
@@ -9228,6 +9269,9 @@ class _ShortcutGroup extends StatelessWidget {
 /// barrel override. Mirrors the two `penFlags` bits the C++ runner
 /// reads — see `PenInputChannel` doc comment.
 enum _NativeBarrel { upper, lower }
+
+/// What a hovering pen previews: eraser radius or lasso badge.
+enum _PenHoverHint { eraser, lasso }
 
 // ═══════════════════════════════════════════════════════════════
 //  PDF IMPORT RANGE PICKER
