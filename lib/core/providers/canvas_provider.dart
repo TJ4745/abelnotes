@@ -2963,19 +2963,6 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
 
   // ── Drawing ──
 
-  /// Moves the eraser preview without starting an erase gesture. Used by
-  /// pointer-hover events so the radius follows a hovering pen.
-  void updateEraserCursorPosition(Offset position) {
-    if (state == null || state!.eraserCursorPos == position) return;
-    state = state!.copyWith(eraserCursorPos: position);
-  }
-
-  /// Hides the eraser preview after the pointer leaves the canvas/proximity.
-  void clearEraserCursor() {
-    if (state?.eraserCursorPos == null) return;
-    state = state!.copyWith(clearEraserCursor: true);
-  }
-
   void startStroke(Offset position, double pressure) {
     if (state == null) return;
     final tool = state!.currentTool;

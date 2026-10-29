@@ -142,7 +142,10 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   // Override armed but the tip isn't touching: GTK reports a barrel press
   // made while hovering as the pointer-down, before any contact.
   bool _barrelAwaitingContact = false;
+  // Eraser radius under a hovering pen, canvas-local; kept out of
+  // CanvasState so autosave/sync don't read it as an erase in progress.
   int? _eraserHoverPointer;
+  final ValueNotifier<Offset?> _eraserHoverPos = ValueNotifier<Offset?>(null);
 
   // ── New chrome state (warm-paper redesign) ─────────────────────
   bool _popupOpen = false;
@@ -978,7 +981,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     );
     // Linux-only: receive stylus pressure the GTK embedder drops. No-op
     // elsewhere. See LinuxPenPressure / _penPressure.
-    LinuxPenPressure.register();
+    LinuxPenPressure.register(onProximityOut: _clearEraserHover);
     // Let the provider's save-prep pause while a stroke is mid-flight.
     // The ActiveStrokeNotifier is screen-local (it bypasses Riverpod for
     // perf), so the provider can't see pen-down state without this probe.
@@ -1510,6 +1513,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     _focusNode.dispose();
     _pdfTextSelController?.dispose();
     _mouseHoverCursor.dispose();
+    _eraserHoverPos.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     // Deliberately NOT calling DesktopWindow.setFullScreen(false) here: by
     // the time dispose() runs the native GTK window may already be
@@ -2367,51 +2371,27 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     return _effectiveStylusOnly() && kind == PointerDeviceKind.touch && _isDrawLikeTool(tool);
   }
 
-  /// Whether the stylus tip is actually touching the surface.
-  /// Linux's native bridge supplies the contact pressure that GTK omits;
-  /// Windows exposes contact through the sub-pixel pen bridge.
-  bool _isStylusTipInContact(PointerEvent event) {
-    if (_linuxPenAsMouse(event)) return _penPressure(event) > 0;
+  // Out-of-contact pen sample: some Linux stacks send proximity as
+  // PointerMoveEvent without the contact bit instead of PointerHoverEvent.
+  bool _isPenHoverSample(PointerEvent event) {
     if (event.kind != PointerDeviceKind.stylus &&
         event.kind != PointerDeviceKind.invertedStylus) {
-      return true;
+      return false;
     }
-    if (!kIsWeb && io.Platform.isWindows) {
-      return WindowsPenSubpixel.latestFresh() != null;
-    }
-    if (!kIsWeb && io.Platform.isLinux) {
-      return _penPressure(event) > 0;
-    }
-    return event is PointerDownEvent || _normalizedEventPressure(event) > 0;
+    return event is PointerHoverEvent ||
+        (event is PointerMoveEvent && (event.buttons & kPrimaryButton) == 0);
   }
 
-  void _updateEraserHover(
-    PointerEvent event,
-    CanvasState? state,
-    Size canvasSize,
-  ) {
-    // Flutter normally reports pen proximity as PointerHoverEvent. On Linux,
-    // some tablet/Wayland stacks deliver the same out-of-contact samples as
-    // PointerMoveEvent with no buttons instead. The previous hover-only path
-    // therefore left the preview at its last position (often the DOWN point).
-    final isHoverSample = event is PointerHoverEvent ||
-        (event is PointerMoveEvent &&
-            (event.buttons == 0 || !_isStylusTipInContact(event)));
-    if (!isHoverSample) return;
-
-    final isStylus = event.kind == PointerDeviceKind.stylus ||
-        event.kind == PointerDeviceKind.invertedStylus;
-    final barrelEraser = isStylus &&
-        (event.kind == PointerDeviceKind.invertedStylus ||
-            (event.buttons & kSecondaryStylusButton) != 0);
-    final isEraserHover = state != null && isStylus &&
-        (_isEraserTool(state.currentTool) || barrelEraser);
-
-    if (isEraserHover) {
+  void _updateEraserHover(PointerEvent event, CanvasState? state) {
+    if (!_isPenHoverSample(event)) {
+      if (event is PointerHoverEvent) _clearEraserHover();
+      return;
+    }
+    final barrelEraser = event.kind == PointerDeviceKind.invertedStylus ||
+        (event.buttons & kSecondaryStylusButton) != 0;
+    if (state != null && (_isEraserTool(state.currentTool) || barrelEraser)) {
       _eraserHoverPointer = event.pointer;
-      ref.read(canvasProvider.notifier).updateEraserCursorPosition(
-            _toPageCoords(_stylusLocalPosition(event), state, canvasSize),
-          );
+      _eraserHoverPos.value = _stylusLocalPosition(event);
     } else if (_eraserHoverPointer == event.pointer) {
       _clearEraserHover();
     }
@@ -2419,37 +2399,27 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
   void _clearEraserHover() {
     _eraserHoverPointer = null;
-    final state = ref.read(canvasProvider);
-    if (state != null && state.eraserCursorPos != null &&
-        !_activeStrokeNotifier.isActive && _activePointers == 0) {
-      ref.read(canvasProvider.notifier).clearEraserCursor();
-    }
+    _eraserHoverPos.value = null;
   }
 
+  // Hides the hover preview when the pen leaves proximity or the canvas
+  // without a MouseRegion exit (e.g. over the dock).
   void _onGlobalPointerEvent(PointerEvent event) {
     if (event.pointer != _eraserHoverPointer) return;
     if (event is PointerRemovedEvent) {
       _clearEraserHover();
       return;
     }
-    final isHoverSample = event is PointerHoverEvent ||
-        (event is PointerMoveEvent &&
-            (event.buttons == 0 || !_isStylusTipInContact(event)));
-    if (!isHoverSample) return;
-    if (event.kind != PointerDeviceKind.stylus &&
-        event.kind != PointerDeviceKind.invertedStylus) {
-      _clearEraserHover();
-      return;
-    }
+    if (!_isPenHoverSample(event)) return;
     final box = _canvasStackKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached ||
-        !Rect.fromLTWH(0, 0, box.size.width, box.size.height)
-            .contains(box.globalToLocal(event.position))) {
+        !(Offset.zero & box.size).contains(box.globalToLocal(event.position))) {
       _clearEraserHover();
     }
   }
 
   void _onPointerDown(PointerDownEvent event, CanvasState state, Size canvasSize) {
+    _clearEraserHover();
     // Gaomon driverless: barrel-held + tip-contact arrives as a
     // synth mouse event in parallel with the suppressed pen stream.
     // For the lower barrel it's WM_MBUTTONDOWN (kind=mouse,
@@ -5414,13 +5384,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                   },
                   onPointerMove: (e) {
                     final live = ref.read(canvasProvider) ?? canvasState;
-                    _updateEraserHover(e, live, canvasSize);
+                    _updateEraserHover(e, live);
                     _onPointerMove(e, live, canvasSize);
                   },
                   onPointerHover: (e) {
                     _lastPointerWasMouse = e.kind == PointerDeviceKind.mouse;
                     final live = ref.read(canvasProvider);
-                    _updateEraserHover(e, live, canvasSize);
+                    _updateEraserHover(e, live);
                     // Pen/stylus (or no state) → tool default cursor (crosshair).
                     if (e.kind != PointerDeviceKind.mouse || live == null) {
                       if (_mouseHoverCursor.value != null) {
@@ -5763,17 +5733,38 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                                       tool: s.currentTool,
                                       pos: s.eraserCursorPos,
                                     )));
-                      if (eraserState == null || eraserState.pos == null) {
+                      if (eraserState == null) {
                         return const SizedBox.shrink();
                       }
                       final fullState = ref.read(canvasProvider);
                       if (fullState == null) {
                         return const SizedBox.shrink();
                       }
-                      return Stack(
-                        children: [
-                          _buildEraserCursor(fullState, canvasSize),
-                        ],
+                      if (eraserState.pos != null &&
+                          _isEraserTool(eraserState.tool)) {
+                        return Stack(
+                          children: [
+                            _buildEraserCursor(
+                              fullState,
+                              _toScreenCoords(
+                                  eraserState.pos!, fullState, canvasSize),
+                              canvasSize,
+                            ),
+                          ],
+                        );
+                      }
+                      // Drag cursor wins; otherwise the hovering pen's.
+                      return ValueListenableBuilder<Offset?>(
+                        valueListenable: _eraserHoverPos,
+                        builder: (context, hoverPos, _) {
+                          if (hoverPos == null) return const SizedBox.shrink();
+                          final live = ref.read(canvasProvider) ?? fullState;
+                          return Stack(
+                            children: [
+                              _buildEraserCursor(live, hoverPos, canvasSize),
+                            ],
+                          );
+                        },
                       );
                     },
                   ),
@@ -6127,9 +6118,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
   bool _isEraserTool(CanvasTool tool) =>
       tool == CanvasTool.eraserStandard || tool == CanvasTool.eraserStroke;
 
-  Widget _buildEraserCursor(CanvasState state, Size canvasSize) {
+  Widget _buildEraserCursor(CanvasState state, Offset pos, Size canvasSize) {
     final p = HwThemeScope.of(context);
-    final pos = _toScreenCoords(state.eraserCursorPos!, state, canvasSize);
     // Radius is in page units (see _eraseAt): screen size needs the same
     // renderScale × zoom factor _toScreenCoords applies to the position.
     final r = eraserSizeToRadius(state.toolSettings.eraserSize) *
