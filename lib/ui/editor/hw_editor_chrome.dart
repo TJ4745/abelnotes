@@ -989,10 +989,11 @@ class HwToolPopup extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '${dia.toStringAsFixed(1)} pt',
+                          l10n.chromeThicknessPx(dia.toStringAsFixed(1)),
                           style: TextStyle(
                             fontSize: 12,
-                            color: p.ink2,
+                            color: p.ink1,
+                            fontFamily: HwTheme.fontMono,
                             fontWeight:
                                 custom ? FontWeight.w700 : FontWeight.w500,
                           ),
@@ -1006,12 +1007,23 @@ class HwToolPopup extends StatelessWidget {
                         ),
                     ],
                   ),
-                  Slider(
-                    value: dia.clamp(1.0, 40.0).toDouble(),
-                    min: 1.0,
-                    max: 40.0,
-                    divisions: 78,
-                    onChanged: (v) => onEraserDiameterChanged?.call(v),
+                  // Same look as the pen thickness slider.
+                  SliderTheme(
+                    data: SliderThemeData(
+                      trackHeight: 4,
+                      thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 8, elevation: 1),
+                      activeTrackColor: p.ink0,
+                      inactiveTrackColor: p.paper3,
+                      thumbColor: p.ink0,
+                    ),
+                    child: Slider(
+                      value: dia.clamp(1.0, 40.0).toDouble(),
+                      min: 1.0,
+                      max: 40.0,
+                      divisions: 78,
+                      onChanged: (v) => onEraserDiameterChanged?.call(v),
+                    ),
                   ),
                 ],
               );
