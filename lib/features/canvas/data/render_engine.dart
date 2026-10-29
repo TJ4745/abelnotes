@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:abelnotes/features/canvas/data/pdf_tiles.dart';
 import 'package:abelnotes/config/app_config.dart';
 import 'package:abelnotes/core/providers/canvas_provider.dart';
 import 'package:abelnotes/features/canvas/data/math_rasterizer.dart';
@@ -266,6 +267,13 @@ class CanvasRenderEngine extends CustomPainter {
   /// cache forever (every-frame re-record = sustained-core CPU on idle).
   final Set<String> failedMathKeys;
 
+  /// Sharper tiles of PDF-backed images, painted over their PNG; read live
+  /// each frame (see pdf_tiles.dart). Null for offscreen renders.
+  final List<PdfTile> Function(String assetPath)? pdfTilesFor;
+
+  /// Changes whenever tiles land, so the page picture is re-recorded.
+  final int Function()? pdfTileVersion;
+
   /// Live imageCache the painter should use this frame — either the
   /// getter's current view (preferred when provided) or the build-time
   /// snapshot. Cheap: one nullable function call + map ref.
@@ -303,6 +311,8 @@ class CanvasRenderEngine extends CustomPainter {
     this.onMathCacheMiss,
     this.mathPixelRatio = 3.0,
     this.failedMathKeys = const <String>{},
+    this.pdfTilesFor,
+    this.pdfTileVersion,
     Listenable? repaintNotifier,
   }) : super(repaint: repaintNotifier);
 
@@ -415,7 +425,10 @@ class CanvasRenderEngine extends CustomPainter {
       // referenced image lacks bytes — once decoded, the next frame
       // builds the cache and subsequent frames replay it.
       final allImagesReady = _allImageAssetsDecoded();
-      final imageSig = allImagesReady ? _pageImageSignature() : 0;
+      final imageSig = allImagesReady
+          ? 0x1fffffff &
+              (_pageImageSignature() + 0x9E3779B1 * (pdfTileVersion?.call() ?? 0))
+          : 0;
       final cached = allImagesReady
           ? _staticPictureCache.lookup(
               pageData: pageData,
@@ -1642,6 +1655,17 @@ class CanvasRenderEngine extends CustomPainter {
         ..isAntiAlias = true
         ..color = Colors.white.withValues(alpha: imageData.opacity);
       canvas.drawImageRect(cachedImage, srcRect, rect, imgPaint);
+      final tiles = pdfTilesFor?.call(imageData.assetPath);
+      if (tiles != null && tiles.isNotEmpty) {
+        canvas.save();
+        canvas.clipRect(rect);
+        for (final t in tiles) {
+          final src = Rect.fromLTWH(
+              0, 0, t.image.width.toDouble(), t.image.height.toDouble());
+          canvas.drawImageRect(t.image, src, t.dest.shift(rect.topLeft), imgPaint);
+        }
+        canvas.restore();
+      }
     } else {
       // Placeholder
       final placeholderPaint = Paint()..color = Colors.grey.shade200..style = PaintingStyle.fill;

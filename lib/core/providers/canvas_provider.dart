@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
+import 'package:abelnotes/features/canvas/data/pdf_sources.dart';
 import 'package:abelnotes/core/platform/device_class.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1003,6 +1004,73 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
   /// canvas repaint listenable next to [imageCacheVersion].
   final ValueNotifier<int> mathCacheVersion = ValueNotifier<int>(0);
 
+  /// Bumped when source PDFs of imported pages arrive from the server.
+  final ValueNotifier<int> pdfSourcesVersion = ValueNotifier<int>(0);
+  bool _pdfSourcesDirty = true;
+  DateTime? _pdfSourcesCheckedAt;
+  bool _pdfSourcesRunning = false;
+
+  /// Retires imports none of whose pages is left. Only imports older than a
+  /// week: a device that hasn't pulled a fresh import's pages yet must not
+  /// take them for deleted. Losing a source only costs the sharp zoom.
+  Future<bool> _retireUnusedPdfSources(
+      PdfSourceStore store, String notebookId) async {
+    final s = state;
+    if (s == null || s.metadata.id != notebookId || s.isDirty) return false;
+    if (s.pendingConflicts.isNotEmpty || s.pendingRemoteChanges != null) {
+      return false;
+    }
+    if (!s.document.pages.every((e) => s.pages.containsKey(e.fileName))) {
+      return false;
+    }
+    final used = _allReferencedAssetIds(s.document, s.pages);
+    final cutoff = DateTime.now()
+        .subtract(const Duration(days: 7))
+        .millisecondsSinceEpoch;
+    var retired = false;
+    for (final idx in await store.loadIndexes()) {
+      final t = idx.createdMs;
+      if (t == null || t > cutoff || idx.pages.keys.any(used.contains)) continue;
+      await store.retire(idx);
+      retired = true;
+    }
+    return retired;
+  }
+
+  /// A PDF import wrote a source PDF: the next sync takes it to the server.
+  void notePdfSourcesChanged() => _pdfSourcesDirty = true;
+
+  /// Mirrors `sources/` with the server on open, after local changes and
+  /// every few minutes; its files never change, so this is cheap to skip.
+  /// [upToDate]: this copy matches the server, so unused imports may go.
+  Future<void> _syncPdfSourcesQuietly(SyncService sync, String notebookId,
+      {bool upToDate = false}) async {
+    if (_pdfSourcesRunning) return;
+    final last = _pdfSourcesCheckedAt;
+    if (!_pdfSourcesDirty &&
+        last != null &&
+        DateTime.now().difference(last) < const Duration(minutes: 5)) {
+      return;
+    }
+    _pdfSourcesRunning = true;
+    try {
+      final store = PdfSourceStore(
+          _ref.read(fileServiceProvider).notebookStoreDir(notebookId));
+      var arrived = await sync.syncPdfSources(notebookId, store);
+      if (upToDate && await _retireUnusedPdfSources(store, notebookId)) {
+        await sync.syncPdfSources(notebookId, store);
+        arrived = true;
+      }
+      _pdfSourcesDirty = false;
+      _pdfSourcesCheckedAt = DateTime.now();
+      if (arrived && state?.metadata.id == notebookId) pdfSourcesVersion.value++;
+    } catch (e) {
+      debugPrint('[Canvas] source PDF sync failed: $e');
+    } finally {
+      _pdfSourcesRunning = false;
+    }
+  }
+
   /// Cache keys whose rasterize permanently failed (no implicit view /
   /// pipeline error). Drawn as a source fallback, never retried, and
   /// treated as "ready" by the static picture cache.
@@ -1315,6 +1383,8 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     // then saving) a newer-format notebook would strip data the newer app
     // wrote — with WebDAV multi-device sync, mixed app versions are normal
     // operation, not an edge case. Better a clear error than silent loss.
+    _pdfSourcesDirty = true;
+    _pdfSourcesCheckedAt = null;
     if (metadata.formatVersion > AppConfig.formatVersion) {
       throw FormatTooNewException(
           metadata.formatVersion, AppConfig.formatVersion);
@@ -9258,6 +9328,9 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
     await fileService.clearDirtyPages(updatedMeta.id);
     await _clearUnpushedBase(updatedMeta.id);
     await fileService.markNotebookSynced(updatedMeta.id, result.metaEtag);
+    if (_pdfSourcesDirty) {
+      unawaited(_syncPdfSourcesQuietly(syncService, updatedMeta.id));
+    }
     unawaited(_ref
         .read(notebookListProvider.notifier)
         .uploadPendingRootFor(updatedMeta.id));
@@ -9581,6 +9654,10 @@ class CanvasNotifier extends StateNotifier<CanvasState?> {
       }
       final metaMoved = fastMetaEtag != null &&
           (_remoteMetaEtag == null || fastMetaEtag != _remoteMetaEtag);
+      if (fastMetaEtag != null) {
+        unawaited(_syncPdfSourcesQuietly(syncService, pullNotebookId,
+            upToDate: !metaMoved && _remoteMetaEtag != null));
+      }
       if (metaMoved || mustDoSafetyNet || _remoteMetaEtag == null) {
         try {
           remoteState =

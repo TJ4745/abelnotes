@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:uuid/uuid.dart';
 import 'package:abelnotes/core/platform/device_class.dart';
 import 'package:abelnotes/core/platform/io.dart' as io;
 import 'package:abelnotes/config/app_config.dart';
@@ -21,6 +22,10 @@ import 'package:abelnotes/core/providers/app_settings_provider.dart';
 import 'package:abelnotes/core/providers/auth_provider.dart'
     show webdavServiceProvider, nextcloudShareServiceProvider;
 import 'package:abelnotes/core/providers/canvas_provider.dart';
+import 'package:abelnotes/features/canvas/data/pdf_source_renderer.dart' show pdfSourceBytes;
+import 'package:abelnotes/features/canvas/data/pdf_sources.dart' show PdfSourceIndex;
+import 'package:abelnotes/features/canvas/presentation/pdf_sharpener.dart';
+import 'package:abelnotes/core/providers/offline_providers.dart' show fileServiceProvider;
 import 'package:abelnotes/features/canvas/presentation/pen_contact.dart';
 import 'package:abelnotes/features/canvas/presentation/missing_page_view.dart';
 import 'package:abelnotes/core/providers/cross_notebook_clipboard_provider.dart';
@@ -417,7 +422,76 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     ref.read(canvasProvider.notifier).imageCacheVersion,
     // Math raster fills bump this so the equation appears on the next frame.
     ref.read(canvasProvider.notifier).mathCacheVersion,
+    _pdfTileVersion,
   ]);
+
+  // ── Sharp zoom of imported PDF pages (see pdf_sharpener.dart) ──
+  PdfSharpener? _pdfSharpener;
+  final ValueNotifier<int> _pdfTileVersion = ValueNotifier(0);
+  late final ViewportSettler _pdfSettler = ViewportSettler(_showPdfViewport);
+  ProviderSubscription<Object?>? _pdfNotebookSub;
+  ProviderSubscription<Object?>? _pdfViewportSub;
+
+  void _watchPdfSources() {
+    _pdfNotebookSub = ref.listenManual<String?>(
+      canvasProvider.select((s) => s?.metadata.id),
+      (_, id) => _openPdfSharpener(id),
+      fireImmediately: true,
+    );
+    _pdfViewportSub = ref.listenManual<Object?>(
+      canvasProvider.select((s) =>
+          s == null ? null : (s.zoom, s.panOffset, s.currentPageFileName)),
+      (_, __) => _pdfSettler.poke(),
+    );
+    final notifier = ref.read(canvasProvider.notifier);
+    notifier.imageCacheVersion.addListener(_pdfSettler.poke);
+    notifier.pdfSourcesVersion.addListener(reloadPdfSources);
+  }
+
+  Future<void> _openPdfSharpener(String? id) async {
+    if (id != null && id == _pdfSharpener?.notebookId) return;
+    _pdfSharpener?.version.removeListener(_bumpPdfTiles);
+    _pdfSharpener?.dispose();
+    _pdfSharpener = null;
+    if (id == null) return;
+    final sharpener = PdfSharpener(
+      id,
+      ref.read(fileServiceProvider).notebookStoreDir(id),
+      cacheBytes: pdfTileCacheBytes(defaultTargetPlatform),
+    );
+    _pdfSharpener = sharpener;
+    sharpener.version.addListener(_bumpPdfTiles);
+    await reloadPdfSources();
+  }
+
+  /// Re-reads the notebook's source PDFs, after an import or a sync.
+  Future<void> reloadPdfSources() async {
+    final sharpener = _pdfSharpener;
+    if (sharpener == null) return;
+    await sharpener.reload();
+    if (mounted && identical(_pdfSharpener, sharpener)) _pdfSettler.poke();
+  }
+
+  void _bumpPdfTiles() => _pdfTileVersion.value++;
+
+  void _showPdfViewport() {
+    final sharpener = _pdfSharpener;
+    final s = ref.read(canvasProvider);
+    final size = _lastCanvasSize;
+    if (!mounted || sharpener == null || s == null || size.isEmpty) return;
+    final page = s.currentPage;
+    if (page == null) return;
+    final a = _toPageCoords(Offset.zero, s, size);
+    final b = _toPageCoords(Offset(size.width, size.height), s, size);
+    sharpener.showViewport(
+      page: page,
+      visiblePage: Rect.fromPoints(a, b),
+      screenDensity: s.zoom *
+          _getRenderScale(s, size) *
+          MediaQuery.devicePixelRatioOf(context),
+      decoded: s.imageCache,
+    );
+  }
 
   /// Fixed device-pixel-ratio to rasterize math at — clamped to a crisp
   /// range and NOT multiplied by zoom, so the math cache key is stable
@@ -988,6 +1062,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     // Hook the Windows-side pen-button bridge. No-op on other
     // platforms. See PenInputChannel for why this exists.
     _watchForLassoCleared();
+    _watchPdfSources();
     PenInputChannel.register(
       onBarrel: (down) => _onNativeBarrelChange(_NativeBarrel.lower, down),
       onInverted: (down) => _onNativeBarrelChange(_NativeBarrel.upper, down),
@@ -1529,6 +1604,16 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
     _longPressTimer?.cancel();
     // Close the manual provider subscriptions opened in initState.
     _lassoClearedSub?.close();
+    _pdfNotebookSub?.close();
+    _pdfViewportSub?.close();
+    try {
+      final notifier = ref.read(canvasProvider.notifier);
+      notifier.imageCacheVersion.removeListener(_pdfSettler.poke);
+      notifier.pdfSourcesVersion.removeListener(reloadPdfSources);
+    } catch (_) {}
+    _pdfSettler.dispose();
+    _pdfSharpener?.dispose();
+    _pdfTileVersion.dispose();
     _pendingImportSub?.close();
     _autoSaveSub?.close();
     _focusNode.dispose();
@@ -4525,6 +4610,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       notifier.beginBulkOperation();
       bulkStarted = true;
       int processed = 0;
+      final keptPages = <(String, int)>[];
       final startPage = ref.read(canvasProvider)?.currentPage;
       final startPageW = startPage?.width ?? 595.0;
       final startPageH = startPage?.height ?? 842.0;
@@ -4611,6 +4697,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
           }
         }
 
+        if (assetId != null) keptPages.add((assetId, i));
         processed++;
 
         // Progress feedback for long imports so the user sees we're alive.
@@ -4634,6 +4721,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
 
       notifier.endBulkOperation();
       bulkStarted = false;
+      await _keepPdfSource(doc, keptPages);
       // Decode the current page's images now that bulk import is done.
       // During import we skipped decode to keep GPU pressure bounded;
       // the user is on the last imported page and expects to see it
@@ -4669,6 +4757,39 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
       // Release PDFium's parse of the source PDF. Runs on every exit path
       // (including the `if (!mounted) return` guards inside the loop).
       await doc.dispose();
+    }
+  }
+
+  /// Keeps the source PDF of imported pages so zooming re-renders them sharp.
+  /// Best effort: without it the pages keep their PNG.
+  Future<void> _keepPdfSource(
+      pdfrx.PdfDocument doc, List<(String, int)> kept) async {
+    final sharpener = _pdfSharpener;
+    if (sharpener == null || kept.isEmpty) return;
+    try {
+      final sourcePages = <int>[];
+      final pages = <String, int>{};
+      for (final (asset, page) in kept) {
+        var at = sourcePages.indexOf(page);
+        if (at < 0) {
+          at = sourcePages.length;
+          sourcePages.add(page);
+        }
+        pages[asset] = at;
+      }
+      final bytes = await pdfSourceBytes(doc, sourcePages);
+      final id = const Uuid().v4();
+      await sharpener.store.save(
+          PdfSourceIndex(
+              id: id,
+              pdf: '$id.pdf',
+              pages: pages,
+              createdMs: DateTime.now().millisecondsSinceEpoch),
+          bytes);
+      ref.read(canvasProvider.notifier).notePdfSourcesChanged();
+      await reloadPdfSources();
+    } catch (e) {
+      debugPrint('[Canvas] keeping the source PDF failed: $e');
     }
   }
 
@@ -5611,6 +5732,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen>
                             return CustomPaint(
                               painter: CanvasRenderEngine(
                                 pageData: livePage,
+                                pdfTilesFor: (asset) =>
+                                    _pdfSharpener?.tilesFor(asset) ?? const [],
+                                pdfTileVersion: () => _pdfTileVersion.value,
                                 // Pass nothing as the snapshot — the painter
                                 // resolves the active stroke via the getter
                                 // every frame so a captured snapshot can
