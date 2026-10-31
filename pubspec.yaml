@@ -40,7 +40,7 @@ dependencies:
   # OS keychain/keystore for secrets (Nextcloud password) — not plaintext
   # prefs. Backed by Keychain (iOS/macOS), Keystore (Android), DPAPI
   # (Windows), Secret Service via libsecret (Linux).
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^10.3.4
 
   # Opens the Google consent page in the user's browser during Drive sign-in
   # on desktop, where the redirect comes back to a local port. Mobile uses
